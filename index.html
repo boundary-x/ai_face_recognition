@@ -34,24 +34,35 @@
     <section class="controls">
       
       <div class="control-group">
-        <h3 data-lang="h_packet">📡 전송 패킷 (UART)</h3>
+        <h3 data-lang="h_monitor">🖥️ 전송 데이터 확인</h3>
         <div class="data-info-box">
-          <p class="info-desc" data-lang="desc_packet">마이크로비트로 전송되는 <strong>19자리 숫자 데이터</strong>입니다.<br>(전송 속도: 10회/초)</p>
+          <p class="info-title" data-lang="info_title">📢 전송 데이터 안내</p>
+          <p class="info-desc" data-lang="info_desc">마이크로비트로 전송되는 <strong>19자리 숫자 데이터</strong>입니다.<br>(전송 속도: 10회/초)</p>
+          <div class="info-tags">
+            <span><strong>X,Y,Z</strong> : 위치</span>
+            <span><strong>Yaw,Pitch,Roll</strong> : 회전</span>
+            <span><strong>Eye,Mouth</strong> : 표정</span>
+          </div>
         </div>
         <div id="dataDisplay" class="data-display">0000000000000000000</div>
       </div>
 
       <div class="control-group">
-        <h3 data-lang="h_connect">🔌 기기 연결</h3>
-        <p data-lang="desc_connect">블루투스 버튼을 눌러 마이크로비트와 연결하세요.</p>
-        <div id="bluetoothStatus" data-lang="status_wait">상태: 연결 대기 중</div>
-        <div id="bluetooth-control-buttons" class="button-group" style="margin-top: 1rem;"></div>
-        <div id="camera-control-buttons" class="button-group" style="margin-top: 0.5rem;"></div>
+        <h3 data-lang="h_cam">1. 카메라 설정</h3>
+        <p data-lang="desc_cam">카메라 버튼을 통해 화면을 설정해주세요.</p>
+        <div id="camera-control-buttons" class="button-group"></div>
       </div>
 
       <div class="control-group">
-        <h3 data-lang="h_params">📊 실시간 데이터 (Labels)</h3>
-        <p data-lang="desc_params">얼굴 움직임과 표정이 아래 데이터로 변환됩니다.</p>
+        <h3 data-lang="h_conn">2. 기기 연결</h3>
+        <p data-lang="desc_conn">블루투스 버튼을 눌러 마이크로비트와 연결하세요.</p>
+        <div id="bluetoothStatus" data-lang="status_wait">상태: 연결 대기 중</div>
+        <div id="bluetooth-control-buttons" class="button-group" style="margin-top: 1rem;"></div>
+      </div>
+
+      <div class="control-group">
+        <h3 data-lang="h_data">3. 실시간 데이터 확인</h3>
+        <p data-lang="desc_data">얼굴 움직임과 표정이 아래 데이터로 변환됩니다.</p>
         
         <div class="param-grid">
             <div class="param-label">
@@ -104,7 +115,8 @@
       </div>
 
       <div class="control-group">
-        <h3 data-lang="h_control">🚀 제어</h3>
+        <h3 data-lang="h_control">4. AI 얼굴 인식 제어</h3>
+        <p data-lang="desc_control">시작 버튼을 눌러 AI 인식을 시작하세요.</p>
         <div id="object-control-buttons" class="button-group"></div>
       </div>
 
