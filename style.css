@@ -1,13 +1,16 @@
-/* style.css */
+/* style.css - Boundary X: Object Detection (Fixed Responsive Header) */
 
 :root {
+  /* Palette */
   --primary: #000000;       
   --primary-hover: #333333; 
   --accent-grey: #F8F9FA;   
   --border-color: #D1D5DB;  
+  
   --bg-color: #FFFFFF;      
   --text-main: #111111;     
   --text-sub: #666666;      
+  
   --danger: #EA4335;        
   --success: #137333;       
   
@@ -17,6 +20,7 @@
 
   --radius-pill: 50px;      
   --radius-card: 16px;      
+  
   --font-family: 'Pretendard', -apple-system, sans-serif;
 }
 
@@ -35,21 +39,37 @@ header {
   top: 0;
   z-index: 100;
   transition: padding 0.3s ease;
+  height: 60px; /* 헤더 높이 고정 (레이아웃 안정성) */
 }
 
-.header-left, .header-right { display: flex; align-items: center; gap: 12px; }
+.header-left, .header-right { 
+  display: flex; 
+  align-items: center; 
+  gap: 12px; 
+}
 
 .title {
-  font-size: 1.25rem; font-weight: 700; color: #FFFFFF;
-  display: flex; align-items: center; gap: 12px;
+  font-size: 1.25rem; 
+  font-weight: 700; 
+  color: #FFFFFF;
+  display: flex; 
+  align-items: center; 
+  gap: 10px;
+  white-space: nowrap; /* 텍스트 줄바꿈 방지 (필수) */
 }
-.title img { height: 28px; width: auto; }
+
+.title img { 
+  height: 28px; 
+  width: auto; 
+  transition: height 0.3s ease;
+}
 
 .model-badge {
   background-color: #333333; color: #00E676;
   font-size: 0.75rem; padding: 4px 10px; border-radius: 20px;
   font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
   border: 1px solid #555; display: inline-block;
+  white-space: nowrap;
 }
 
 .back-button {
@@ -63,7 +83,7 @@ header {
     background: transparent; color: #888; border: 1px solid #555;
     padding: 0.4rem 0.8rem; border-radius: var(--radius-pill);
     font-size: 0.8rem; font-weight: 700; cursor: pointer; min-width: auto;
-    transition: all 0.2s;
+    transition: all 0.2s; white-space: nowrap;
 }
 .lang-toggle:hover { color: #FFF; border-color: #FFF; }
 
@@ -130,7 +150,52 @@ address { font-style: normal; color: #888; line-height: 1.6; }
 .link-column a:hover { color: #FFFFFF; text-decoration: underline; text-underline-offset: 4px; }
 .link-desc { font-size: 0.8rem; color: #666; }
 
-/* Responsive */
-@media (min-width: 768px) { main { flex-direction: row; align-items: flex-start; justify-content: center; gap: 3rem; } .canvas-container { position: sticky; top: 2rem; width: 400px; } .controls { flex: 1; } }
-@media (max-width: 767px) { .param-grid { grid-template-columns: repeat(2, 1fr); } header { padding: 0.8rem 1rem; } .title { font-size: 1rem; } .canvas-container { position: sticky; top: 70px; z-index: 90; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5); width: 100%; margin-bottom: 0.5rem; } .control-group { padding: 1.2rem; } .button-group { flex-direction: column; } button { width: 100%; } .footer-top { flex-direction: column; gap: 3rem; } .footer-links { gap: 2.5rem; flex-direction: column; } }
-@media (max-width: 900px) and (orientation: landscape) { header { padding: 0.5rem 1rem; } main { flex-direction: row; align-items: flex-start; padding: 1rem; gap: 1.5rem; } .canvas-container { position: sticky; top: 80px; z-index: 90; width: 45%; min-width: 300px; } .controls { flex: 1; } footer { display: none; } }
+/* --- RESPONSIVE LAYOUT (Mobile Optimization) --- */
+
+/* 1. PC & Tablet */
+@media (min-width: 768px) {
+  main { flex-direction: row; align-items: flex-start; justify-content: center; gap: 3rem; }
+  .canvas-container { position: sticky; top: 2rem; width: 400px; }
+  .controls { flex: 1; }
+}
+
+/* 2. Mobile Portrait (세로 모드) */
+@media (max-width: 767px) {
+  /* 헤더 강제 축소 */
+  header { padding: 0.5rem 0.8rem; height: 50px; }
+  .header-left { gap: 6px; }
+  .header-right { gap: 6px; }
+
+  /* 로고 및 텍스트 강제 축소 */
+  .title { font-size: 0.85rem; gap: 4px; }
+  .title img { height: 18px !important; } /* 로고 높이 강제 조정 */
+  
+  /* 배지 및 버튼 축소 */
+  .model-badge { font-size: 0.6rem; padding: 2px 6px; }
+  .back-button { font-size: 0.75rem; padding: 0.3rem 0.6rem; }
+  .lang-toggle { font-size: 0.7rem; padding: 0.3rem 0.5rem; }
+
+  /* 본문 레이아웃 */
+  .param-grid { grid-template-columns: repeat(2, 1fr); }
+  main { padding: 1rem; gap: 1rem; }
+  
+  .canvas-container { 
+    position: sticky; top: 55px; z-index: 90; 
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5); width: 100%; margin-bottom: 0.5rem; 
+  }
+  .control-group { padding: 1.2rem; }
+  .button-group { flex-direction: column; }
+  button { width: 100%; }
+  
+  .footer-top { flex-direction: column; gap: 3rem; }
+  .footer-links { gap: 2.5rem; flex-direction: column; }
+}
+
+/* 3. Mobile Landscape (가로 모드) */
+@media (max-width: 900px) and (orientation: landscape) {
+  header { padding: 0.4rem 1rem; height: 50px; }
+  main { flex-direction: row; align-items: flex-start; padding: 1rem; gap: 1.5rem; }
+  .canvas-container { position: sticky; top: 60px; z-index: 90; width: 45%; min-width: 300px; }
+  .controls { flex: 1; }
+  footer { display: none; }
+}
