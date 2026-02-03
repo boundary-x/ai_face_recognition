@@ -1,6 +1,6 @@
 /*
  * sketch.js
- * Boundary X - Face Recognition (Labels with Descriptions)
+ * Boundary X - Face Recognition (Final: Stop Command Updated)
  */
 
 import { FaceLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3";
@@ -16,13 +16,16 @@ const textData = {
     info_title: "📢 전송 데이터 안내",
     info_desc: "마이크로비트로 전송되는 <strong>19자리 숫자 데이터</strong>입니다.<br>(전송 속도: 10회/초)",
     
-    // Cards
+    // Cards with Numbers
     h_cam: "1. 카메라 설정",
     desc_cam: "카메라 버튼을 통해 화면을 설정해주세요.",
+    
     h_conn: "2. 기기 연결",
     desc_conn: "블루투스 버튼을 눌러 마이크로비트와 연결하세요.",
+    
     h_data: "3. 실시간 데이터 확인",
     desc_data: "얼굴 움직임과 표정이 아래 데이터로 변환됩니다.",
+    
     h_control: "4. AI 얼굴 인식 제어",
     desc_control: "시작 버튼을 눌러 AI 인식을 시작하세요.",
 
@@ -71,10 +74,13 @@ const textData = {
     
     h_cam: "1. Camera Settings",
     desc_cam: "Configure your camera view.",
+    
     h_conn: "2. Connection",
     desc_conn: "Pair with Micro:bit via Bluetooth.",
+    
     h_data: "3. Real-time Data",
     desc_data: "Face movements converted to parameters.",
+    
     h_control: "4. AI Control",
     desc_control: "Start or Stop the AI recognition.",
 
@@ -255,7 +261,8 @@ async function predictWebcam() {
 }
 
 function drawFaceMesh(landmarks) {
-  noFill(); stroke(0, 255, 0); strokeWeight(3);
+  // [스타일] 검은색, 얇게
+  noFill(); stroke(0); strokeWeight(1);
   let scaleX = width;
   let scaleY = height;
   beginShape(POINTS);
@@ -267,12 +274,13 @@ function drawFaceMesh(landmarks) {
   }
   endShape();
   
+  // [스타일] 코 끝 (약간 작게)
   let nose = landmarks[1]; 
   let nx = nose.x * scaleX; 
   if(isFlipped) nx = width - nx;
   
-  fill(255, 0, 0); noStroke(); circle(nx, nose.y * scaleY, 15);
-  noFill(); stroke(255); strokeWeight(2); circle(nx, nose.y * scaleY, 15);
+  fill(255, 0, 0); noStroke(); circle(nx, nose.y * scaleY, 10);
+  noFill(); stroke(255); strokeWeight(1.5); circle(nx, nose.y * scaleY, 10);
 }
 
 function calculateParameters(landmarks, blendshapes) {
@@ -285,12 +293,14 @@ function calculateParameters(landmarks, blendshapes) {
   params.z = constrain(map(widthVal, 0.1, 0.7, 0, 99), 0, 99);
   params.z = Math.floor(params.z);
 
+  // Yaw
   let dLeft = Math.abs(landmarks[1].x - landmarks[454].x);
   let dRight = Math.abs(landmarks[1].x - landmarks[234].x);
   let yawRatio = dRight / (dLeft + dRight); 
   if(isFlipped) yawRatio = 1 - yawRatio;
   params.yaw = constrain(Math.floor(yawRatio * 100), 0, 99);
 
+  // Pitch
   let midEyeY = landmarks[168].y;
   let mouthY = landmarks[13].y;
   let noseY = landmarks[1].y;
@@ -298,13 +308,15 @@ function calculateParameters(landmarks, blendshapes) {
   params.pitch = constrain(map(pitchRatio, 0.8, 0.2, 0, 99), 0, 99);
   params.pitch = Math.floor(params.pitch);
 
+  // Roll (Left=0, Right=9)
   let dy = landmarks[33].y - landmarks[263].y; 
   let dx = landmarks[33].x - landmarks[263].x;
   let angle = Math.atan2(dy, dx); 
-  if(isFlipped) angle = -angle;
-  let rollVal = map(angle, -0.7, 0.7, 0, 9);
+  let rollVal = map(angle, 0.7, -0.7, 0, 9);
   params.roll = constrain(Math.round(rollVal), 0, 9);
 
+
+  // Blendshapes
   let shapes = {};
   if (blendshapes && blendshapes.categories) {
     blendshapes.categories.forEach(s => shapes[s.categoryName] = s.score);
@@ -382,13 +394,23 @@ function createUI() {
     predictWebcam();
   });
 
+  // [수정] 인식 중지 버튼: "stop" 문자열 전송
   btnStop = createButton("인식 중지");
   btnStop.parent('object-control-buttons').addClass('stop-button');
   btnStop.mousePressed(() => {
     isDetecting = false;
     params.visible = 0;
     updateGraphUI();
-    sendPacket();
+    
+    // UI 업데이트 (Stop 표시)
+    select('#dataDisplay').html("stop");
+    
+    // 블루투스 전송
+    if (isConnected && rxCharacteristic) {
+      const encoder = new TextEncoder();
+      rxCharacteristic.writeValue(encoder.encode("stop\n"))
+        .catch(err => console.log(err));
+    }
   });
 }
 
