@@ -1,6 +1,6 @@
 /*
  * sketch.js
- * Boundary X - Face Recognition (Layout & Lang Update)
+ * Boundary X - Face Recognition (Labels with Descriptions)
  */
 
 import { FaceLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3";
@@ -16,16 +16,13 @@ const textData = {
     info_title: "📢 전송 데이터 안내",
     info_desc: "마이크로비트로 전송되는 <strong>19자리 숫자 데이터</strong>입니다.<br>(전송 속도: 10회/초)",
     
-    // Cards with Numbers
+    // Cards
     h_cam: "1. 카메라 설정",
     desc_cam: "카메라 버튼을 통해 화면을 설정해주세요.",
-    
     h_conn: "2. 기기 연결",
     desc_conn: "블루투스 버튼을 눌러 마이크로비트와 연결하세요.",
-    
     h_data: "3. 실시간 데이터 확인",
     desc_data: "얼굴 움직임과 표정이 아래 데이터로 변환됩니다.",
-    
     h_control: "4. AI 얼굴 인식 제어",
     desc_control: "시작 버튼을 눌러 AI 인식을 시작하세요.",
 
@@ -45,8 +42,14 @@ const textData = {
     alert_loading: "모델 로딩 중입니다.",
     alert_ble: "주의: 블루투스가 연결되지 않았습니다.",
     
-    // Labels
-    p_x: "X (좌우)", p_y: "Y (상하)", p_z: "Z (거리)", p_roll: "Roll (0-9)", p_smile: "Smile (0-9)",
+    // Labels (With Descriptions)
+    p_x: "X (좌우)", 
+    p_y: "Y (상하)", 
+    p_z: "Z (거리)", 
+    p_yaw: "Yaw (좌우회전)", 
+    p_pitch: "Pitch (상하각도)", 
+    p_roll: "Roll (기울기)", 
+    p_smile: "Smile (0-9)",
     
     // Footer
     f_company: "바운더리엑스",
@@ -68,13 +71,10 @@ const textData = {
     
     h_cam: "1. Camera Settings",
     desc_cam: "Configure your camera view.",
-    
     h_conn: "2. Connection",
     desc_conn: "Pair with Micro:bit via Bluetooth.",
-    
     h_data: "3. Real-time Data",
     desc_data: "Face movements converted to parameters.",
-    
     h_control: "4. AI Control",
     desc_control: "Start or Stop the AI recognition.",
 
@@ -93,7 +93,14 @@ const textData = {
     alert_loading: "Model is still loading...",
     alert_ble: "Warning: Bluetooth not connected.",
     
-    p_x: "X (Left/Right)", p_y: "Y (Up/Down)", p_z: "Z (Distance)", p_roll: "Roll (0-9)", p_smile: "Smile (0-9)",
+    // Labels (With Descriptions)
+    p_x: "X (Left/Right)", 
+    p_y: "Y (Up/Down)", 
+    p_z: "Z (Distance)", 
+    p_yaw: "Yaw (Turn)", 
+    p_pitch: "Pitch (Up/Down)", 
+    p_roll: "Roll (Tilt)", 
+    p_smile: "Smile (0-9)",
     
     f_company: "Boundary X",
     f_slogan: "\"We blur the lines between industry and education, bringing future tech to the classroom.\"",
@@ -132,6 +139,7 @@ let facingMode = "user";
 let isFlipped = true;
 let isVideoReady = false;
 
+// Default Roll -> 5 (Center)
 let params = { x: 50, y: 50, z: 50, yaw: 50, pitch: 50, roll: 5, mouth: 0, lEye: 0, rEye: 0, smile: 0, visible: 0 };
 
 // UI Elements
@@ -165,7 +173,6 @@ function setup() {
   setupCamera();
   createUI();
   
-  // Lang Toggle
   select('#lang-btn').mousePressed(() => {
       currentLang = (currentLang === 'ko') ? 'en' : 'ko';
       updateLanguage();
@@ -212,15 +219,12 @@ function draw() {
 // --- Logic ---
 function updateLanguage() {
     const t = textData[currentLang];
-    
-    // Update HTML text
     const langElements = document.querySelectorAll('[data-lang]');
     langElements.forEach(el => {
         const key = el.getAttribute('data-lang');
         if(t[key]) el.innerHTML = t[key];
     });
 
-    // Update Buttons
     if(btnSwitch) btnSwitch.html(t.btn_switch);
     if(btnConn) btnConn.html(t.btn_conn);
     if(btnDisc) btnDisc.html(t.btn_disc);
@@ -230,7 +234,6 @@ function updateLanguage() {
         btnStart.html(isModelLoaded ? t.btn_start : t.btn_start_loading);
     }
 
-    // Status
     const statusEl = select('#bluetoothStatus');
     if(!isConnected) {
         statusEl.html(t.status_wait);
@@ -252,7 +255,7 @@ async function predictWebcam() {
 }
 
 function drawFaceMesh(landmarks) {
-  noFill(); stroke(0, 255, 255, 100); strokeWeight(1);
+  noFill(); stroke(0, 255, 0); strokeWeight(3);
   let scaleX = width;
   let scaleY = height;
   beginShape(POINTS);
@@ -263,10 +266,13 @@ function drawFaceMesh(landmarks) {
     vertex(x, y);
   }
   endShape();
+  
   let nose = landmarks[1]; 
   let nx = nose.x * scaleX; 
   if(isFlipped) nx = width - nx;
-  fill(255, 0, 0); noStroke(); circle(nx, nose.y * scaleY, 8);
+  
+  fill(255, 0, 0); noStroke(); circle(nx, nose.y * scaleY, 15);
+  noFill(); stroke(255); strokeWeight(2); circle(nx, nose.y * scaleY, 15);
 }
 
 function calculateParameters(landmarks, blendshapes) {
@@ -294,9 +300,10 @@ function calculateParameters(landmarks, blendshapes) {
 
   let dy = landmarks[33].y - landmarks[263].y; 
   let dx = landmarks[33].x - landmarks[263].x;
-  let angle = Math.atan2(dy, dx);
+  let angle = Math.atan2(dy, dx); 
   if(isFlipped) angle = -angle;
-  params.roll = constrain(Math.floor(map(angle, -0.5, 0.5, 0, 9)), 0, 9);
+  let rollVal = map(angle, -0.7, 0.7, 0, 9);
+  params.roll = constrain(Math.round(rollVal), 0, 9);
 
   let shapes = {};
   if (blendshapes && blendshapes.categories) {
@@ -340,27 +347,31 @@ function updateGraphUI() {
   };
   setVal('x', params.x, 99); setVal('y', params.y, 99); setVal('z', params.z, 99);
   setVal('yaw', params.yaw, 99); setVal('pitch', params.pitch, 99);
-  setVal('mouth', params.mouth, 99); setVal('leye', params.lEye, 99); setVal('reye', params.rEye, 99);
+  setVal('mouth', params.mouth, 99); 
+  setVal('leye', params.lEye, 99); 
+  setVal('reye', params.rEye, 99);
   setVal('roll', params.roll, 9); setVal('smile', params.smile, 9); setVal('vis', params.visible, 1);
 }
 
 function createUI() {
   const link = (key, id) => { els[key] = { bar: select(`#bar-${id}`), txt: select(`#val-${id}`) }; };
-  link('x', 'x'); link('y', 'y'); link('z', 'z'); link('yaw', 'yaw'); link('pitch', 'pitch'); link('roll', 'roll');
-  link('mouth', 'mouth'); link('lEye', 'leye'); link('rEye', 'reye'); link('smile', 'smile'); link('vis', 'vis');
+  
+  link('x', 'x'); link('y', 'y'); link('z', 'z'); 
+  link('yaw', 'yaw'); link('pitch', 'pitch'); link('roll', 'roll');
+  link('mouth', 'mouth'); 
+  link('leye', 'leye'); 
+  link('reye', 'reye'); 
+  link('smile', 'smile'); link('vis', 'vis');
 
-  // 1. Camera Buttons
   btnSwitch = createButton("전후방 전환");
   btnSwitch.parent('camera-control-buttons').mousePressed(switchCamera);
   
-  // 2. Connection Buttons
   btnConn = createButton("기기 연결");
   btnConn.parent('bluetooth-control-buttons').addClass('start-button').mousePressed(connectBluetooth);
 
   btnDisc = createButton("연결 해제");
   btnDisc.parent('bluetooth-control-buttons').addClass('stop-button').mousePressed(disconnectBluetooth);
 
-  // 4. Control Buttons (AI)
   btnStart = createButton("모델 로딩 중...");
   btnStart.parent('object-control-buttons').addClass('start-button');
   btnStart.mousePressed(() => {
