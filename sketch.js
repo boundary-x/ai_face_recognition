@@ -267,7 +267,7 @@ async function predictWebcam() {
 
 function drawFaceMesh(landmarks) {
   // [스타일] 검은색, 얇게
-  noFill(); stroke(0); strokeWeight(1);
+  noFill(); stroke(0); strokeWeight(3);
   let scaleX = width;
   let scaleY = height;
   beginShape(POINTS);
@@ -472,3 +472,4 @@ function disconnectBluetooth() {
 
 window.setup = setup;
 window.draw = draw;
+
