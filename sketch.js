@@ -1,6 +1,6 @@
 /*
  * sketch.js
- * Boundary X - Face Recognition (Multi-language Support)
+ * Boundary X - Face Recognition (Layout & Lang Update)
  */
 
 import { FaceLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3";
@@ -10,23 +10,38 @@ const textData = {
   ko: {
     title: "AI 얼굴인식",
     back: "돌아가기",
-    h_packet: "📡 전송 패킷 (UART)",
-    desc_packet: "마이크로비트로 전송되는 <strong>19자리 숫자 데이터</strong>입니다.<br>(전송 속도: 10회/초)",
-    h_connect: "🔌 기기 연결",
-    desc_connect: "블루투스 버튼을 눌러 마이크로비트와 연결하세요.",
+    
+    // Monitors
+    h_monitor: "🖥️ 전송 데이터 확인",
+    info_title: "📢 전송 데이터 안내",
+    info_desc: "마이크로비트로 전송되는 <strong>19자리 숫자 데이터</strong>입니다.<br>(전송 속도: 10회/초)",
+    
+    // Cards with Numbers
+    h_cam: "1. 카메라 설정",
+    desc_cam: "카메라 버튼을 통해 화면을 설정해주세요.",
+    
+    h_conn: "2. 기기 연결",
+    desc_conn: "블루투스 버튼을 눌러 마이크로비트와 연결하세요.",
+    
+    h_data: "3. 실시간 데이터 확인",
+    desc_data: "얼굴 움직임과 표정이 아래 데이터로 변환됩니다.",
+    
+    h_control: "4. AI 얼굴 인식 제어",
+    desc_control: "시작 버튼을 눌러 AI 인식을 시작하세요.",
+
+    // Status & Buttons
     status_wait: "상태: 연결 대기 중",
     status_connected: "연결됨: ",
     status_fail: "연결 실패",
     status_disc: "연결 해제됨",
-    h_params: "📊 실시간 데이터 (Labels)",
-    desc_params: "얼굴 움직임과 표정이 아래 데이터로 변환됩니다.",
-    h_control: "🚀 제어",
+    
     btn_switch: "전후방 전환",
     btn_conn: "기기 연결",
     btn_disc: "연결 해제",
     btn_start_loading: "모델 로딩 중...",
     btn_start: "얼굴 인식 시작",
     btn_stop: "인식 중지",
+    
     alert_loading: "모델 로딩 중입니다.",
     alert_ble: "주의: 블루투스가 연결되지 않았습니다.",
     
@@ -46,30 +61,40 @@ const textData = {
   en: {
     title: "AI Face Recog",
     back: "Back",
-    h_packet: "📡 UART Packet",
-    desc_packet: "<strong>19-digit numeric data</strong> sent to Micro:bit.<br>(Rate: 10 times/sec)",
-    h_connect: "🔌 Connection",
-    desc_connect: "Click button to pair with Micro:bit via Bluetooth.",
+    
+    h_monitor: "🖥️ Packet Monitor",
+    info_title: "📢 Data Packet Info",
+    info_desc: "<strong>19-digit numeric data</strong> sent to Micro:bit.<br>(Rate: 10 times/sec)",
+    
+    h_cam: "1. Camera Settings",
+    desc_cam: "Configure your camera view.",
+    
+    h_conn: "2. Connection",
+    desc_conn: "Pair with Micro:bit via Bluetooth.",
+    
+    h_data: "3. Real-time Data",
+    desc_data: "Face movements converted to parameters.",
+    
+    h_control: "4. AI Control",
+    desc_control: "Start or Stop the AI recognition.",
+
     status_wait: "Status: Waiting...",
     status_connected: "Connected: ",
     status_fail: "Connection Failed",
     status_disc: "Disconnected",
-    h_params: "📊 Real-time Labels",
-    desc_params: "Face movements converted to parameters below.",
-    h_control: "🚀 Controls",
+    
     btn_switch: "Switch Cam",
     btn_conn: "Connect Device",
     btn_disc: "Disconnect",
     btn_start_loading: "Loading Model...",
     btn_start: "Start Face Mesh",
     btn_stop: "Stop",
+    
     alert_loading: "Model is still loading...",
     alert_ble: "Warning: Bluetooth not connected.",
     
-    // Labels
     p_x: "X (Left/Right)", p_y: "Y (Up/Down)", p_z: "Z (Distance)", p_roll: "Roll (0-9)", p_smile: "Smile (0-9)",
     
-    // Footer
     f_company: "Boundary X",
     f_slogan: "\"We blur the lines between industry and education, bringing future tech to the classroom.\"",
     f_address: "706, Dongtan 2 Incubating Center, Hwaseong-si, Gyeonggi-do, Korea",
@@ -109,7 +134,7 @@ let isVideoReady = false;
 
 let params = { x: 50, y: 50, z: 50, yaw: 50, pitch: 50, roll: 5, mouth: 0, lEye: 0, rEye: 0, smile: 0, visible: 0 };
 
-// UI Element References
+// UI Elements
 let els = {};
 let btnSwitch, btnConn, btnDisc, btnStart, btnStop;
 
@@ -129,7 +154,7 @@ async function initializeFaceLandmarker() {
   });
   isModelLoaded = true;
   console.log("FaceLandmarker Loaded!");
-  updateLanguage(); // Update button text when loaded
+  updateLanguage(); 
 }
 
 // --- p5.js ---
@@ -140,7 +165,7 @@ function setup() {
   setupCamera();
   createUI();
   
-  // Lang Button Logic
+  // Lang Toggle
   select('#lang-btn').mousePressed(() => {
       currentLang = (currentLang === 'ko') ? 'en' : 'ko';
       updateLanguage();
@@ -188,34 +213,31 @@ function draw() {
 function updateLanguage() {
     const t = textData[currentLang];
     
-    // 1. Update HTML Elements with data-lang attribute
+    // Update HTML text
     const langElements = document.querySelectorAll('[data-lang]');
     langElements.forEach(el => {
         const key = el.getAttribute('data-lang');
         if(t[key]) el.innerHTML = t[key];
     });
 
-    // 2. Update p5.js Buttons
+    // Update Buttons
     if(btnSwitch) btnSwitch.html(t.btn_switch);
     if(btnConn) btnConn.html(t.btn_conn);
     if(btnDisc) btnDisc.html(t.btn_disc);
     if(btnStop) btnStop.html(t.btn_stop);
     
-    // Start button has dynamic state
     if(btnStart) {
         btnStart.html(isModelLoaded ? t.btn_start : t.btn_start_loading);
     }
 
-    // 3. Update Status Text (Only if not connected name)
+    // Status
     const statusEl = select('#bluetoothStatus');
     if(!isConnected) {
         statusEl.html(t.status_wait);
     } else {
-         // Keep "Connected: [DeviceName]" format
         statusEl.html(t.status_connected + (bluetoothDevice ? bluetoothDevice.name : ""));
     }
 
-    // 4. Update Toggle Button Text
     select('#lang-btn').html(currentLang === 'ko' ? 'EN' : 'KO');
 }
 
@@ -327,15 +349,18 @@ function createUI() {
   link('x', 'x'); link('y', 'y'); link('z', 'z'); link('yaw', 'yaw'); link('pitch', 'pitch'); link('roll', 'roll');
   link('mouth', 'mouth'); link('lEye', 'leye'); link('rEye', 'reye'); link('smile', 'smile'); link('vis', 'vis');
 
+  // 1. Camera Buttons
   btnSwitch = createButton("전후방 전환");
   btnSwitch.parent('camera-control-buttons').mousePressed(switchCamera);
   
+  // 2. Connection Buttons
   btnConn = createButton("기기 연결");
   btnConn.parent('bluetooth-control-buttons').addClass('start-button').mousePressed(connectBluetooth);
 
   btnDisc = createButton("연결 해제");
   btnDisc.parent('bluetooth-control-buttons').addClass('stop-button').mousePressed(disconnectBluetooth);
 
+  // 4. Control Buttons (AI)
   btnStart = createButton("모델 로딩 중...");
   btnStart.parent('object-control-buttons').addClass('start-button');
   btnStart.mousePressed(() => {
