@@ -1,12 +1,89 @@
 /*
  * sketch.js
- * Boundary X Object Detection (Powered by MediaPipe)
- * Features: Auto-Mirroring, Safety Stop, Optimized Rendering
+ * Boundary X - Face Recognition (Multi-language Support)
  */
 
-import { ObjectDetector, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.2";
+import { FaceLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3";
 
-// --- Bluetooth UUIDs (Microbit UART) ---
+// --- Multi-language Data ---
+const textData = {
+  ko: {
+    title: "AI 얼굴인식",
+    back: "돌아가기",
+    h_packet: "📡 전송 패킷 (UART)",
+    desc_packet: "마이크로비트로 전송되는 <strong>19자리 숫자 데이터</strong>입니다.<br>(전송 속도: 10회/초)",
+    h_connect: "🔌 기기 연결",
+    desc_connect: "블루투스 버튼을 눌러 마이크로비트와 연결하세요.",
+    status_wait: "상태: 연결 대기 중",
+    status_connected: "연결됨: ",
+    status_fail: "연결 실패",
+    status_disc: "연결 해제됨",
+    h_params: "📊 실시간 데이터 (Labels)",
+    desc_params: "얼굴 움직임과 표정이 아래 데이터로 변환됩니다.",
+    h_control: "🚀 제어",
+    btn_switch: "전후방 전환",
+    btn_conn: "기기 연결",
+    btn_disc: "연결 해제",
+    btn_start_loading: "모델 로딩 중...",
+    btn_start: "얼굴 인식 시작",
+    btn_stop: "인식 중지",
+    alert_loading: "모델 로딩 중입니다.",
+    alert_ble: "주의: 블루투스가 연결되지 않았습니다.",
+    
+    // Labels
+    p_x: "X (좌우)", p_y: "Y (상하)", p_z: "Z (거리)", p_roll: "Roll (0-9)", p_smile: "Smile (0-9)",
+    
+    // Footer
+    f_company: "바운더리엑스",
+    f_slogan: "\"우리는 산업과 교육의 경계를 허물고, 미래 기술을 교실의 책상 위로 옮기는 사람들입니다\"",
+    f_address: "경기도 화성시 동탄첨단산업1로 동탄2인큐베이팅센터 7층, 706호",
+    f_product: "제품 소개",
+    f_bitrun: "AI 비트런", f_bitrun_desc: "마이크로비트 기반 이족보행로봇",
+    f_ponybot: "AI 포니봇", f_ponybot_desc: "마이크로비트 기반 모빌리티로봇",
+    f_support: "고객 지원",
+    f_contact: "문의처", f_contact_desc: "제품 문의 | 제휴 문의 | 연수 문의"
+  },
+  en: {
+    title: "AI Face Recog",
+    back: "Back",
+    h_packet: "📡 UART Packet",
+    desc_packet: "<strong>19-digit numeric data</strong> sent to Micro:bit.<br>(Rate: 10 times/sec)",
+    h_connect: "🔌 Connection",
+    desc_connect: "Click button to pair with Micro:bit via Bluetooth.",
+    status_wait: "Status: Waiting...",
+    status_connected: "Connected: ",
+    status_fail: "Connection Failed",
+    status_disc: "Disconnected",
+    h_params: "📊 Real-time Labels",
+    desc_params: "Face movements converted to parameters below.",
+    h_control: "🚀 Controls",
+    btn_switch: "Switch Cam",
+    btn_conn: "Connect Device",
+    btn_disc: "Disconnect",
+    btn_start_loading: "Loading Model...",
+    btn_start: "Start Face Mesh",
+    btn_stop: "Stop",
+    alert_loading: "Model is still loading...",
+    alert_ble: "Warning: Bluetooth not connected.",
+    
+    // Labels
+    p_x: "X (Left/Right)", p_y: "Y (Up/Down)", p_z: "Z (Distance)", p_roll: "Roll (0-9)", p_smile: "Smile (0-9)",
+    
+    // Footer
+    f_company: "Boundary X",
+    f_slogan: "\"We blur the lines between industry and education, bringing future tech to the classroom.\"",
+    f_address: "706, Dongtan 2 Incubating Center, Hwaseong-si, Gyeonggi-do, Korea",
+    f_product: "Products",
+    f_bitrun: "AI Bit-Run", f_bitrun_desc: "Micro:bit Bipedal Robot",
+    f_ponybot: "AI Pony-Bot", f_ponybot_desc: "Micro:bit Mobility Robot",
+    f_support: "Support",
+    f_contact: "Contact Us", f_contact_desc: "Inquiry | Partnership | Training"
+  }
+};
+
+let currentLang = 'ko';
+
+// --- Bluetooth UUIDs ---
 const UART_SERVICE_UUID = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
 const UART_TX_CHARACTERISTIC_UUID = "6e400002-b5a3-f393-e0a9-e50e24dcca9e";
 const UART_RX_CHARACTERISTIC_UUID = "6e400003-b5a3-f393-e0a9-e50e24dcca9e";
@@ -14,376 +91,291 @@ const UART_RX_CHARACTERISTIC_UUID = "6e400003-b5a3-f393-e0a9-e50e24dcca9e";
 // --- Variables ---
 let bluetoothDevice = null;
 let rxCharacteristic = null;
-let txCharacteristic = null;
 let isConnected = false;
-let bluetoothStatus = "연결 대기 중";
-let isSendingData = false; 
-
+let isSendingData = false;
 let lastSentTime = 0; 
-const SEND_INTERVAL = 100; // 데이터 전송 간격 (ms)
+const SEND_INTERVAL = 100;
 
-// Video & AI
 let video;
-let detections = []; 
-let selectedObjects = []; 
-let confidenceThreshold = 50; 
-let isObjectDetectionActive = false; 
-let wasDetectingBeforeSwitch = false; 
-
-// Camera Control
-let facingMode = "user"; // 초기값: 전방 카메라
-let isFlipped = true;    // 초기값: 거울 모드 (전방이니까)
-let isVideoReady = false; 
-
-// MediaPipe
-let objectDetector;
+let faceLandmarker;
 let lastVideoTime = -1;
 let isModelLoaded = false;
+let isDetecting = false;
+let detectionResults = null;
 
-// UI Elements
-let switchCameraButton, connectBluetoothButton, disconnectBluetoothButton;
-let startDetectionButton, stopDetectionButton;
-let objectSelect, confidenceSlider;
-let confidenceLabel;
-let dataDisplay;
-let selectedObjectsListDiv; 
+let facingMode = "user";
+let isFlipped = true;
+let isVideoReady = false;
 
-// --- MediaPipe Initialization ---
-async function initializeMediaPipe() {
-  const vision = await FilesetResolver.forVisionTasks(
-    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.2/wasm"
+let params = { x: 50, y: 50, z: 50, yaw: 50, pitch: 50, roll: 5, mouth: 0, lEye: 0, rEye: 0, smile: 0, visible: 0 };
+
+// UI Element References
+let els = {};
+let btnSwitch, btnConn, btnDisc, btnStart, btnStop;
+
+// --- Init ---
+async function initializeFaceLandmarker() {
+  const filesetResolver = await FilesetResolver.forVisionTasks(
+    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm"
   );
-  
-  objectDetector = await ObjectDetector.createFromOptions(vision, {
+  faceLandmarker = await FaceLandmarker.createFromOptions(filesetResolver, {
     baseOptions: {
-      modelAssetPath: `https://storage.googleapis.com/mediapipe-models/object_detector/efficientdet_lite0/float16/1/efficientdet_lite0.tflite`,
-      delegate: "GPU" // 모바일 GPU 가속 사용
+      modelAssetPath: `https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task`,
+      delegate: "GPU"
     },
-    scoreThreshold: 0.3, 
-    runningMode: "VIDEO"
+    outputFaceBlendshapes: true,
+    runningMode: "VIDEO",
+    numFaces: 1
   });
-  
   isModelLoaded = true;
-  console.log("MediaPipe Model Loaded!");
-  if(startDetectionButton) startDetectionButton.html("사물 인식 시작");
+  console.log("FaceLandmarker Loaded!");
+  updateLanguage(); // Update button text when loaded
 }
 
-// --- p5.js Main Functions ---
-
+// --- p5.js ---
 function setup() {
-  // 400x300 캔버스 생성
   let canvas = createCanvas(400, 300);
   canvas.parent('p5-container');
-  canvas.style('border-radius', '16px');
   
   setupCamera();
   createUI();
-  initializeMediaPipe();
+  
+  // Lang Button Logic
+  select('#lang-btn').mousePressed(() => {
+      currentLang = (currentLang === 'ko') ? 'en' : 'ko';
+      updateLanguage();
+  });
+
+  initializeFaceLandmarker();
 }
 
 function draw() {
-  background(0); 
+  background(0);
 
-  // 카메라 준비 안됐으면 로딩 텍스트
   if (!isVideoReady || !video || video.width === 0) {
-    fill(255); textAlign(CENTER, CENTER); textSize(16);
-    text("카메라 로딩 중...", width / 2, height / 2);
+    fill(255); textAlign(CENTER); textSize(16);
+    text(currentLang === 'ko' ? "카메라 로딩 중..." : "Loading Camera...", width/2, height/2);
     return;
   }
 
-  // 화면 그리기 (반전 여부에 따라 처리)
   push();
   if (isFlipped) { translate(width, 0); scale(-1, 1); }
   image(video, 0, 0, width, height);
   pop();
 
-  // 변수 초기화
-  let highestConfidenceObject = null;
-  let detectedCount = 0; 
-  let scaleX = width / video.elt.videoWidth;
-  let scaleY = height / video.elt.videoHeight;
+  if (isDetecting && detectionResults && detectionResults.faceLandmarks.length > 0) {
+    drawFaceMesh(detectionResults.faceLandmarks[0]);
+    calculateParameters(detectionResults.faceLandmarks[0], detectionResults.faceBlendshapes[0]);
+    params.visible = 1;
+  } else {
+    params.visible = 0;
+    params.smile = 0;
+    params.mouth = 0;
+  }
+
+  updateGraphUI();
   
-  // 1. 대장(Target) 찾기
-  if (isObjectDetectionActive && detections.length > 0) {
-    detections.forEach((object) => {
-      if (selectedObjects.includes(object.label) && object.confidence * 100 >= confidenceThreshold) {
-        if (!highestConfidenceObject || object.confidence > highestConfidenceObject.confidence) {
-          highestConfidenceObject = object;
-        }
-      }
-    });
-  }
-
-  // 2. 박스 그리기 (파란색 or 초록색)
-  if (isObjectDetectionActive && detections.length > 0) {
-    detections.forEach((object) => {
-      if (selectedObjects.includes(object.label) && object.confidence * 100 >= confidenceThreshold) {
-        
-        detectedCount++;
-        
-        let drawX = object.x * scaleX;
-        let drawY = object.y * scaleY;
-        let drawW = object.width * scaleX;
-        let drawH = object.height * scaleY;
-
-        // 반전 모드일 때 좌표 보정
-        if (isFlipped) drawX = width - drawX - drawW;
-
-        if (object === highestConfidenceObject) {
-            // [Target] 파란색 진한 박스
-            stroke(0, 100, 255); strokeWeight(4); noFill();
-            rect(drawX, drawY, drawW, drawH);
-            
-            // 라벨 배경
-            noStroke(); fill(0, 100, 255);
-            rect(drawX, drawY > 20 ? drawY - 25 : drawY, textWidth(object.label) + 55, 25);
-            
-            // 라벨 텍스트
-            fill(255); textSize(16); textStyle(BOLD);
-            text(`${object.label} ${(object.confidence * 100).toFixed(0)}%`, drawX + 5, drawY > 20 ? drawY - 7 : drawY + 18);
-            
-        } else {
-            // [Others] 초록색 얇은 박스
-            stroke(0, 255, 0); strokeWeight(2); noFill();
-            rect(drawX, drawY, drawW, drawH);
-            
-            noStroke(); fill(0, 255, 0); textSize(14); textStyle(NORMAL);
-            text(`${object.label} ${(object.confidence * 100).toFixed(0)}%`, drawX + 5, drawY > 20 ? drawY - 5 : drawY + 20);
-        }
-      }
-    });
-  }
-
-  // 3. 데이터 전송 (대장 좌표 기준 or Stop 신호)
-  if (isObjectDetectionActive) {
-      let currentTime = millis();
-      if (currentTime - lastSentTime > SEND_INTERVAL) {
-          
-          if (highestConfidenceObject) {
-              // 사물 인식됨 -> 좌표 전송
-              let obj = highestConfidenceObject;
-              let finalX = obj.x * scaleX;
-              let finalY = obj.y * scaleY;
-              let finalW = obj.width * scaleX;
-              let finalH = obj.height * scaleY;
-              
-              let centerX = finalX + finalW / 2;
-              let centerY = finalY + finalH / 2;
-
-              // 반전 모드 시 중심 좌표도 반전
-              if (isFlipped) centerX = width - centerX;
-              
-              sendBluetoothData(centerX, centerY, finalW, finalH, detectedCount);
-              
-              const dataStr = `x${Math.round(centerX)} y${Math.round(centerY)} w${Math.round(finalW)} h${Math.round(finalH)} d${detectedCount}`;
-              dataDisplay.html(`전송됨: ${dataStr}`);
-              dataDisplay.style("color", "#0f0");
-          } else {
-              // 사물 없음 -> Stop 신호 전송 (d=0)
-              sendBluetoothData(0, 0, 0, 0, 0);
-              dataDisplay.html(`전송됨: 없음 (Stop)`);
-              dataDisplay.style("color", "#888");
-          }
-          lastSentTime = currentTime;
-      }
+  if (isDetecting) {
+    let currentTime = millis();
+    if (currentTime - lastSentTime > SEND_INTERVAL) {
+      sendPacket();
+      lastSentTime = currentTime;
+    }
   }
 }
 
-// --- Helper Functions ---
+// --- Logic ---
+function updateLanguage() {
+    const t = textData[currentLang];
+    
+    // 1. Update HTML Elements with data-lang attribute
+    const langElements = document.querySelectorAll('[data-lang]');
+    langElements.forEach(el => {
+        const key = el.getAttribute('data-lang');
+        if(t[key]) el.innerHTML = t[key];
+    });
+
+    // 2. Update p5.js Buttons
+    if(btnSwitch) btnSwitch.html(t.btn_switch);
+    if(btnConn) btnConn.html(t.btn_conn);
+    if(btnDisc) btnDisc.html(t.btn_disc);
+    if(btnStop) btnStop.html(t.btn_stop);
+    
+    // Start button has dynamic state
+    if(btnStart) {
+        btnStart.html(isModelLoaded ? t.btn_start : t.btn_start_loading);
+    }
+
+    // 3. Update Status Text (Only if not connected name)
+    const statusEl = select('#bluetoothStatus');
+    if(!isConnected) {
+        statusEl.html(t.status_wait);
+    } else {
+         // Keep "Connected: [DeviceName]" format
+        statusEl.html(t.status_connected + (bluetoothDevice ? bluetoothDevice.name : ""));
+    }
+
+    // 4. Update Toggle Button Text
+    select('#lang-btn').html(currentLang === 'ko' ? 'EN' : 'KO');
+}
+
+async function predictWebcam() {
+  if (!faceLandmarker || !isVideoReady) return;
+  let startTimeMs = performance.now();
+  if (video.elt.currentTime !== lastVideoTime) {
+    lastVideoTime = video.elt.currentTime;
+    detectionResults = faceLandmarker.detectForVideo(video.elt, startTimeMs);
+  }
+  if (isDetecting) window.requestAnimationFrame(predictWebcam);
+}
+
+function drawFaceMesh(landmarks) {
+  noFill(); stroke(0, 255, 255, 100); strokeWeight(1);
+  let scaleX = width;
+  let scaleY = height;
+  beginShape(POINTS);
+  for (let pt of landmarks) {
+    let x = pt.x * scaleX;
+    let y = pt.y * scaleY;
+    if (isFlipped) x = width - x;
+    vertex(x, y);
+  }
+  endShape();
+  let nose = landmarks[1]; 
+  let nx = nose.x * scaleX; 
+  if(isFlipped) nx = width - nx;
+  fill(255, 0, 0); noStroke(); circle(nx, nose.y * scaleY, 8);
+}
+
+function calculateParameters(landmarks, blendshapes) {
+  let nose = landmarks[1];
+  let rawX = isFlipped ? (1 - nose.x) : nose.x;
+  params.x = constrain(Math.floor(rawX * 100), 0, 99);
+  params.y = constrain(Math.floor(nose.y * 100), 0, 99);
+
+  let widthVal = Math.abs(landmarks[234].x - landmarks[454].x);
+  params.z = constrain(map(widthVal, 0.1, 0.7, 0, 99), 0, 99);
+  params.z = Math.floor(params.z);
+
+  let dLeft = Math.abs(landmarks[1].x - landmarks[454].x);
+  let dRight = Math.abs(landmarks[1].x - landmarks[234].x);
+  let yawRatio = dRight / (dLeft + dRight); 
+  if(isFlipped) yawRatio = 1 - yawRatio;
+  params.yaw = constrain(Math.floor(yawRatio * 100), 0, 99);
+
+  let midEyeY = landmarks[168].y;
+  let mouthY = landmarks[13].y;
+  let noseY = landmarks[1].y;
+  let pitchRatio = (noseY - midEyeY) / (mouthY - midEyeY); 
+  params.pitch = constrain(map(pitchRatio, 0.8, 0.2, 0, 99), 0, 99);
+  params.pitch = Math.floor(params.pitch);
+
+  let dy = landmarks[33].y - landmarks[263].y; 
+  let dx = landmarks[33].x - landmarks[263].x;
+  let angle = Math.atan2(dy, dx);
+  if(isFlipped) angle = -angle;
+  params.roll = constrain(Math.floor(map(angle, -0.5, 0.5, 0, 9)), 0, 9);
+
+  let shapes = {};
+  if (blendshapes && blendshapes.categories) {
+    blendshapes.categories.forEach(s => shapes[s.categoryName] = s.score);
+  }
+  let mOpen = shapes['jawOpen'] || 0;
+  params.mouth = Math.floor(constrain(mOpen * 100, 0, 99));
+
+  let lBlink = shapes['eyeBlinkLeft'] || 0;
+  let rBlink = shapes['eyeBlinkRight'] || 0;
+  params.lEye = Math.floor(constrain((1 - lBlink) * 100, 0, 99));
+  params.rEye = Math.floor(constrain((1 - rBlink) * 100, 0, 99));
+
+  let smileVal = ((shapes['mouthSmileLeft'] || 0) + (shapes['mouthSmileRight'] || 0)) / 2;
+  params.smile = Math.floor(constrain(smileVal * 10, 0, 9)); 
+}
+
+function sendPacket() {
+  if (!isConnected || !rxCharacteristic) return;
+  const pad = (num) => String(num).padStart(2, '0');
+  let p = params;
+  let packet = "" + pad(p.x) + pad(p.y) + pad(p.z) + pad(p.yaw) + pad(p.pitch) + pad(p.mouth) + pad(p.lEye) + pad(p.rEye) + String(p.roll) + String(p.smile) + String(p.visible);
+  select('#dataDisplay').html(packet);
+
+  if (!isSendingData) {
+    isSendingData = true;
+    const encoder = new TextEncoder();
+    rxCharacteristic.writeValue(encoder.encode(packet + "\n"))
+      .catch(err => console.log(err))
+      .finally(() => isSendingData = false);
+  }
+}
+
+function updateGraphUI() {
+  const setVal = (id, val, max) => {
+    if(els[id]) {
+        let percent = (val / max) * 100;
+        els[id].bar.style('width', `${percent}%`);
+        els[id].txt.html(val);
+    }
+  };
+  setVal('x', params.x, 99); setVal('y', params.y, 99); setVal('z', params.z, 99);
+  setVal('yaw', params.yaw, 99); setVal('pitch', params.pitch, 99);
+  setVal('mouth', params.mouth, 99); setVal('leye', params.lEye, 99); setVal('reye', params.rEye, 99);
+  setVal('roll', params.roll, 9); setVal('smile', params.smile, 9); setVal('vis', params.visible, 1);
+}
+
+function createUI() {
+  const link = (key, id) => { els[key] = { bar: select(`#bar-${id}`), txt: select(`#val-${id}`) }; };
+  link('x', 'x'); link('y', 'y'); link('z', 'z'); link('yaw', 'yaw'); link('pitch', 'pitch'); link('roll', 'roll');
+  link('mouth', 'mouth'); link('lEye', 'leye'); link('rEye', 'reye'); link('smile', 'smile'); link('vis', 'vis');
+
+  btnSwitch = createButton("전후방 전환");
+  btnSwitch.parent('camera-control-buttons').mousePressed(switchCamera);
+  
+  btnConn = createButton("기기 연결");
+  btnConn.parent('bluetooth-control-buttons').addClass('start-button').mousePressed(connectBluetooth);
+
+  btnDisc = createButton("연결 해제");
+  btnDisc.parent('bluetooth-control-buttons').addClass('stop-button').mousePressed(disconnectBluetooth);
+
+  btnStart = createButton("모델 로딩 중...");
+  btnStart.parent('object-control-buttons').addClass('start-button');
+  btnStart.mousePressed(() => {
+    const t = textData[currentLang];
+    if (!isModelLoaded) return alert(t.alert_loading);
+    if (!isConnected) alert(t.alert_ble);
+    isDetecting = true;
+    predictWebcam();
+  });
+
+  btnStop = createButton("인식 중지");
+  btnStop.parent('object-control-buttons').addClass('stop-button');
+  btnStop.mousePressed(() => {
+    isDetecting = false;
+    params.visible = 0;
+    updateGraphUI();
+    sendPacket();
+  });
+}
 
 function setupCamera() {
   isVideoReady = false;
-  let constraints = { video: { facingMode: facingMode }, audio: false };
-
-  video = createCapture(constraints);
-  video.hide(); 
-
-  let videoLoadCheck = setInterval(() => {
+  video = createCapture({ video: { facingMode: facingMode }, audio: false });
+  video.hide();
+  let check = setInterval(() => {
     if (video.elt.readyState >= 2 && video.elt.videoWidth > 0) {
       isVideoReady = true;
-      clearInterval(videoLoadCheck);
-      console.log(`Camera Loaded: ${facingMode}`);
-      if (wasDetectingBeforeSwitch) {
-        startObjectDetection();
-        wasDetectingBeforeSwitch = false;
-      }
+      clearInterval(check);
+      if(isDetecting) predictWebcam();
     }
   }, 100);
 }
 
-function stopVideo() {
-    if (video) {
-        if (video.elt.srcObject) {
-            const tracks = video.elt.srcObject.getTracks();
-            tracks.forEach(track => track.stop());
-        }
-        video.remove();
-        video = null;
-    }
-}
-
-function createUI() {
-  dataDisplay = select('#dataDisplay');
-  dataDisplay.html("전송 대기 중...");
-
-  // Buttons
-  switchCameraButton = createButton("전후방 전환");
-  switchCameraButton.parent('camera-control-buttons');
-  switchCameraButton.addClass('start-button');
-  switchCameraButton.mousePressed(switchCamera);
-
-  connectBluetoothButton = createButton("기기 연결");
-  connectBluetoothButton.parent('bluetooth-control-buttons');
-  connectBluetoothButton.addClass('start-button');
-  connectBluetoothButton.mousePressed(connectBluetooth);
-
-  disconnectBluetoothButton = createButton("연결 해제");
-  disconnectBluetoothButton.parent('bluetooth-control-buttons');
-  disconnectBluetoothButton.addClass('stop-button');
-  disconnectBluetoothButton.mousePressed(disconnectBluetooth);
-
-  // Selector
-  objectSelect = createSelect();
-  objectSelect.parent('object-select-container');
-  objectSelect.option("사물을 선택하세요", ""); 
-  
-  const objectList = [
-    "person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat", "traffic light",
-    "fire hydrant", "stop sign", "parking meter", "bench", "bird", "cat", "dog", "horse", "sheep", "cow",
-    "elephant", "bear", "zebra", "giraffe", "backpack", "umbrella", "handbag", "tie", "suitcase", "frisbee",
-    "skis", "snowboard", "sports ball", "kite", "baseball bat", "baseball glove", "skateboard", "surfboard",
-    "tennis racket", "bottle", "wine glass", "cup", "fork", "knife", "spoon", "bowl", "banana", "apple",
-    "sandwich", "orange", "broccoli", "carrot", "hot dog", "pizza", "donut", "cake", "chair", "couch",
-    "potted plant", "bed", "dining table", "toilet", "tv", "laptop", "mouse", "remote", "keyboard",
-    "cell phone", "microwave", "oven", "toaster", "sink", "refrigerator", "book", "clock", "vase",
-    "scissors", "teddy bear", "hair drier", "toothbrush"
-  ];
-  objectList.forEach((item) => objectSelect.option(item));
-  
-  objectSelect.changed(() => {
-      const val = objectSelect.value();
-      if(val && !selectedObjects.includes(val)) addSelectedObject(val);
-      objectSelect.value(""); 
-  });
-
-  selectedObjectsListDiv = select('#selected-objects-list');
-
-  // Slider
-  confidenceSlider = createSlider(0, 100, 50);
-  confidenceSlider.parent('confidence-container');
-  updateSliderFill(confidenceSlider);
-
-  confidenceSlider.input(() => {
-    confidenceThreshold = confidenceSlider.value();
-    if(confidenceLabel) confidenceLabel.html(`정확도 기준: ${confidenceThreshold}%`);
-    updateSliderFill(confidenceSlider);
-  });
-
-  confidenceLabel = createDiv(`정확도 기준: ${confidenceThreshold}%`);
-  confidenceLabel.parent('confidence-container');
-  confidenceLabel.style('font-size', '1.2rem');
-  confidenceLabel.style('font-weight', '700');
-  confidenceLabel.style('color', '#000000');
-  confidenceLabel.style('margin-top', '10px');
-
-  // Start/Stop Buttons
-  startDetectionButton = createButton("모델 로딩 중...");
-  startDetectionButton.parent('object-control-buttons');
-  startDetectionButton.addClass('start-button');
-  startDetectionButton.mousePressed(() => {
-    if (!isModelLoaded) { alert("AI 모델 로딩 중입니다."); return; }
-    if (!isConnected) { alert("블루투스가 연결되지 않았습니다!"); return; }
-    if (selectedObjects.length === 0) { alert("사물을 선택해주세요."); return; }
-    startObjectDetection();
-  });
-
-  stopDetectionButton = createButton("인식 중지");
-  stopDetectionButton.parent('object-control-buttons');
-  stopDetectionButton.addClass('stop-button');
-  stopDetectionButton.mousePressed(() => {
-    stopObjectDetection();
-    sendBluetoothData("stop"); // 정지 시 Stop 신호 전송
-  });
-
-  updateBluetoothStatusUI();
-}
-
-function updateSliderFill(slider) {
-    const val = (slider.value() - slider.elt.min) / (slider.elt.max - slider.elt.min) * 100;
-    slider.elt.style.background = `linear-gradient(to right, #000000 ${val}%, #D1D5DB ${val}%)`;
-}
-
-function addSelectedObject(objName) {
-    selectedObjects.push(objName);
-    renderSelectedObjects();
-}
-
-function removeSelectedObject(objName) {
-    selectedObjects = selectedObjects.filter(item => item !== objName);
-    renderSelectedObjects();
-}
-
-function renderSelectedObjects() {
-    selectedObjectsListDiv.html(''); 
-    selectedObjects.forEach(obj => {
-        const tag = createDiv();
-        tag.addClass('tag-item');
-        tag.html(`${obj} <span class="tag-remove">&times;</span>`);
-        tag.parent(selectedObjectsListDiv);
-        tag.mouseClicked(() => removeSelectedObject(obj));
-    });
-}
-
 function switchCamera() {
-  wasDetectingBeforeSwitch = isObjectDetectionActive;
-  isObjectDetectionActive = false; 
-  stopVideo(); 
-  isVideoReady = false;
-  
-  // 카메라 전환 및 자동 거울 모드 설정
+  isDetecting = false;
+  if(video) { video.remove(); video = null; }
   facingMode = facingMode === "user" ? "environment" : "user";
   isFlipped = (facingMode === "user");
-
-  setTimeout(setupCamera, 500);
+  setTimeout(() => { setupCamera(); isDetecting = true; }, 500);
 }
-
-function startObjectDetection() {
-  if (!isVideoReady) { console.warn("카메라 준비 안됨"); return; }
-  isObjectDetectionActive = true;
-  predictWebcam(); 
-}
-
-function stopObjectDetection() {
-  isObjectDetectionActive = false;
-  detections = []; 
-}
-
-// MediaPipe Inference Loop
-async function predictWebcam() {
-  if (!isObjectDetectionActive || !isVideoReady || !video) return;
-  let startTimeMs = performance.now();
-
-  if (video.elt.currentTime !== lastVideoTime) {
-    lastVideoTime = video.elt.currentTime;
-    const result = objectDetector.detectForVideo(video.elt, startTimeMs);
-    
-    if (result.detections) {
-      detections = result.detections.map(d => {
-        return {
-          label: d.categories[0].categoryName.toLowerCase(), 
-          confidence: d.categories[0].score, 
-          x: d.boundingBox.originX,
-          y: d.boundingBox.originY,
-          width: d.boundingBox.width,
-          height: d.boundingBox.height
-        };
-      });
-    }
-  }
-  if (isObjectDetectionActive) window.requestAnimationFrame(predictWebcam);
-}
-
-// --- Bluetooth Logic ---
 
 async function connectBluetooth() {
   try {
@@ -394,66 +386,22 @@ async function connectBluetooth() {
     const server = await bluetoothDevice.gatt.connect();
     const service = await server.getPrimaryService(UART_SERVICE_UUID);
     rxCharacteristic = await service.getCharacteristic(UART_RX_CHARACTERISTIC_UUID);
-    txCharacteristic = await service.getCharacteristic(UART_TX_CHARACTERISTIC_UUID);
-    txCharacteristic.startNotifications();
     isConnected = true;
-    bluetoothStatus = "연결됨: " + bluetoothDevice.name;
-    updateBluetoothStatusUI(true);
-  } catch (error) {
-    console.error(error);
-    bluetoothStatus = "연결 실패";
-    updateBluetoothStatusUI(false, true);
+    const t = textData[currentLang];
+    select('#bluetoothStatus').html(t.status_connected + bluetoothDevice.name).addClass('status-connected');
+  } catch (e) {
+    console.error(e);
+    const t = textData[currentLang];
+    select('#bluetoothStatus').html(t.status_fail).addClass('status-error');
   }
 }
 
 function disconnectBluetooth() {
-  if (bluetoothDevice && bluetoothDevice.gatt.connected) {
-    bluetoothDevice.gatt.disconnect();
-  }
+  if (bluetoothDevice && bluetoothDevice.gatt.connected) bluetoothDevice.gatt.disconnect();
   isConnected = false;
-  bluetoothStatus = "연결 해제됨";
-  rxCharacteristic = null;
-  txCharacteristic = null;
-  bluetoothDevice = null;
-  updateBluetoothStatusUI(false);
+  const t = textData[currentLang];
+  select('#bluetoothStatus').html(t.status_disc).removeClass('status-connected status-error');
 }
 
-function updateBluetoothStatusUI(connected = false, error = false) {
-  const statusElement = select('#bluetoothStatus');
-  if(statusElement) {
-      statusElement.html(`상태: ${bluetoothStatus}`);
-      statusElement.removeClass('status-connected');
-      statusElement.removeClass('status-error');
-      if (connected) statusElement.addClass('status-connected');
-      else if (error) statusElement.addClass('status-error');
-  }
-}
-
-async function sendBluetoothData(x, y, width, height, detectedCount) {
-  if (!rxCharacteristic || !isConnected) return;
-  if (isSendingData) return;
-  
-  try {
-    isSendingData = true; 
-    
-    // Stop 신호 처리 (좌표가 stop 이거나 감지된 수가 0일 때)
-    if (x === "stop" || detectedCount === 0) {
-      const encoder = new TextEncoder();
-      await rxCharacteristic.writeValue(encoder.encode("stop\n"));
-      return;
-    }
-    
-    // 일반 데이터 전송
-    if (detectedCount > 0) {
-      const data = `x${Math.round(x)}y${Math.round(y)}w${Math.round(width)}h${Math.round(height)}d${detectedCount}\n`;
-      const encoder = new TextEncoder();
-      await rxCharacteristic.writeValue(encoder.encode(data));
-    }
-
-  } catch (error) { console.error(error); } 
-  finally { isSendingData = false; }
-}
-
-// Global Scope Export (for HTML)
 window.setup = setup;
 window.draw = draw;
