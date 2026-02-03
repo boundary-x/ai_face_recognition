@@ -1,6 +1,7 @@
 /*
  * sketch.js
- * Boundary X - Face Recognition (Final: Stop Command Updated)
+ * Boundary X - Face Recognition (Final Version)
+ * Features: Face Mesh (Black/Thin), Correct Roll/Eye Logic, Multi-language, Stop Command
  */
 
 import { FaceLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3";
@@ -225,12 +226,15 @@ function draw() {
 // --- Logic ---
 function updateLanguage() {
     const t = textData[currentLang];
+    
+    // Update HTML text
     const langElements = document.querySelectorAll('[data-lang]');
     langElements.forEach(el => {
         const key = el.getAttribute('data-lang');
         if(t[key]) el.innerHTML = t[key];
     });
 
+    // Update Buttons
     if(btnSwitch) btnSwitch.html(t.btn_switch);
     if(btnConn) btnConn.html(t.btn_conn);
     if(btnDisc) btnDisc.html(t.btn_disc);
@@ -240,6 +244,7 @@ function updateLanguage() {
         btnStart.html(isModelLoaded ? t.btn_start : t.btn_start_loading);
     }
 
+    // Status
     const statusEl = select('#bluetoothStatus');
     if(!isConnected) {
         statusEl.html(t.status_wait);
@@ -308,13 +313,18 @@ function calculateParameters(landmarks, blendshapes) {
   params.pitch = constrain(map(pitchRatio, 0.8, 0.2, 0, 99), 0, 99);
   params.pitch = Math.floor(params.pitch);
 
-  // Roll (Left=0, Right=9)
-  let dy = landmarks[33].y - landmarks[263].y; 
-  let dx = landmarks[33].x - landmarks[263].x;
+  // [Roll] (Tilt)
+  // landmarks[33]: Left Eye, landmarks[263]: Right Eye
+  // dy calculation order: Right - Left
+  let dy = landmarks[263].y - landmarks[33].y;
+  let dx = landmarks[263].x - landmarks[33].x;
   let angle = Math.atan2(dy, dx); 
-  let rollVal = map(angle, 0.7, -0.7, 0, 9);
-  params.roll = constrain(Math.round(rollVal), 0, 9);
+  
+  if(isFlipped) angle = -angle;
 
+  // Map -0.5 ~ 0.5 radians to 0 ~ 9
+  let rollVal = map(angle, -0.5, 0.5, 0, 9);
+  params.roll = constrain(Math.round(rollVal), 0, 9);
 
   // Blendshapes
   let shapes = {};
@@ -394,7 +404,7 @@ function createUI() {
     predictWebcam();
   });
 
-  // [수정] 인식 중지 버튼: "stop" 문자열 전송
+  // 인식 중지 버튼: "stop" 문자열 전송
   btnStop = createButton("인식 중지");
   btnStop.parent('object-control-buttons').addClass('stop-button');
   btnStop.mousePressed(() => {
@@ -402,10 +412,9 @@ function createUI() {
     params.visible = 0;
     updateGraphUI();
     
-    // UI 업데이트 (Stop 표시)
+    // UI 업데이트 및 Stop 전송
     select('#dataDisplay').html("stop");
     
-    // 블루투스 전송
     if (isConnected && rxCharacteristic) {
       const encoder = new TextEncoder();
       rxCharacteristic.writeValue(encoder.encode("stop\n"))
