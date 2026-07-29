@@ -35,6 +35,8 @@ const textData = {
     status_connected: "연결됨: ",
     status_fail: "연결 실패",
     status_disc: "연결 해제됨",
+    err_send: "⚠️ 데이터 전송 실패 - 연결 상태를 확인해주세요",
+    err_disconnected: "⚠️ 연결이 끊어졌습니다. 다시 연결해주세요",
     
     btn_switch: "전후방 전환",
     btn_conn: "기기 연결",
@@ -89,6 +91,8 @@ const textData = {
     status_connected: "Connected: ",
     status_fail: "Connection Failed",
     status_disc: "Disconnected",
+    err_send: "⚠️ Data transmission failed - Check connection",
+    err_disconnected: "⚠️ Connection lost. Please reconnect",
     
     btn_switch: "Switch Cam",
     btn_conn: "Connect Device",
@@ -127,6 +131,14 @@ const UART_SERVICE_UUID = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
 const UART_TX_CHARACTERISTIC_UUID = "6e400002-b5a3-f393-e0a9-e50e24dcca9e";
 const UART_RX_CHARACTERISTIC_UUID = "6e400003-b5a3-f393-e0a9-e50e24dcca9e";
 
+// 주어진 프로미스가 정해진 시간 안에 끝나지 않으면 강제로 실패 처리 (BLE 응답이 영영 안 올 때 대비)
+function withTimeout(promise, ms) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('BLE write timeout')), ms))
+  ]);
+}
+
 // --- Variables ---
 let bluetoothDevice = null;
 let rxCharacteristic = null;
@@ -134,6 +146,7 @@ let isConnected = false;
 let isSendingData = false;
 let lastSentTime = 0; 
 const SEND_INTERVAL = 100;
+let lastSendErrorTime = 0;
 
 let video;
 let faceLandmarker;
@@ -349,14 +362,44 @@ function sendPacket() {
   let p = params;
   let packet = "" + pad(p.x) + pad(p.y) + pad(p.z) + pad(p.yaw) + pad(p.pitch) + pad(p.mouth) + pad(p.lEye) + pad(p.rEye) + String(p.roll) + String(p.smile) + String(p.visible);
   select('#dataDisplay').html(packet);
+  sendBluetoothData(packet);
+}
 
-  if (!isSendingData) {
+// 성공하면 true, 스킵되거나 실패하면 false를 반환
+async function sendBluetoothData(data) {
+  if (!isConnected || !rxCharacteristic) return false;
+  if (isSendingData) return false;
+
+  try {
     isSendingData = true;
     const encoder = new TextEncoder();
-    rxCharacteristic.writeValue(encoder.encode(packet + "\n"))
-      .catch(err => console.log(err))
-      .finally(() => isSendingData = false);
+    // writeValue가 끝내 응답하지 않는 경우를 대비해 2초 타임아웃을 둠 (전송 영구 정지 방지)
+    await withTimeout(rxCharacteristic.writeValue(encoder.encode(data + "\n")), 2000);
+    return true;
+  } catch (err) {
+    console.error("Error sending data:", err);
+    const now = Date.now();
+    if (now - lastSendErrorTime > 3000) {
+      lastSendErrorTime = now;
+      const t = textData[currentLang];
+      const statusEl = select('#bluetoothStatus');
+      if (statusEl) statusEl.html(t.err_send).removeClass('status-connected').addClass('status-error');
+    }
+    return false;
+  } finally {
+    isSendingData = false;
   }
+}
+
+// 'stop'처럼 반드시 전달되어야 하는 명령을 위한 재시도 버전
+async function sendBluetoothDataReliable(data, maxRetries = 5, retryDelayMs = 80) {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    const sent = await sendBluetoothData(data);
+    if (sent) return true;
+    await new Promise(resolve => setTimeout(resolve, retryDelayMs));
+  }
+  console.error(`전송 재시도 실패: ${data}`);
+  return false;
 }
 
 function updateGraphUI() {
@@ -407,7 +450,7 @@ function createUI() {
   // 인식 중지 버튼: "stop" 문자열 전송
   btnStop = createButton("인식 중지");
   btnStop.parent('object-control-buttons').addClass('stop-button');
-  btnStop.mousePressed(() => {
+  btnStop.mousePressed(async () => {
     isDetecting = false;
     params.visible = 0;
     updateGraphUI();
@@ -415,11 +458,7 @@ function createUI() {
     // UI 업데이트 및 Stop 전송
     select('#dataDisplay').html("stop");
     
-    if (isConnected && rxCharacteristic) {
-      const encoder = new TextEncoder();
-      rxCharacteristic.writeValue(encoder.encode("stop\n"))
-        .catch(err => console.log(err));
-    }
+    await sendBluetoothDataReliable("stop");
   });
 }
 
@@ -453,23 +492,61 @@ async function connectBluetooth() {
     const server = await bluetoothDevice.gatt.connect();
     const service = await server.getPrimaryService(UART_SERVICE_UUID);
     rxCharacteristic = await service.getCharacteristic(UART_RX_CHARACTERISTIC_UUID);
+
+    // 마이크로비트가 범위를 벗어나거나 전원이 꺼지는 등 예기치 않게 끊겼을 때도 상태를 동기화
+    bluetoothDevice.addEventListener('gattserverdisconnected', onDisconnected);
+
     isConnected = true;
     const t = textData[currentLang];
-    select('#bluetoothStatus').html(t.status_connected + bluetoothDevice.name).addClass('status-connected');
+    select('#bluetoothStatus').html(t.status_connected + bluetoothDevice.name).removeClass('status-error').addClass('status-connected');
   } catch (e) {
     console.error(e);
     const t = textData[currentLang];
-    select('#bluetoothStatus').html(t.status_fail).addClass('status-error');
+    select('#bluetoothStatus').html(t.status_fail).removeClass('status-connected').addClass('status-error');
   }
 }
 
-function disconnectBluetooth() {
-  if (bluetoothDevice && bluetoothDevice.gatt.connected) bluetoothDevice.gatt.disconnect();
+// 사용자가 직접 '연결 해제' 버튼을 눌렀는지 구분하기 위한 플래그
+let isManualDisconnect = false;
+
+// 수동 해제든 예기치 않은 끊김이든 이 함수 하나로 상태를 정리
+function onDisconnected() {
   isConnected = false;
+  bluetoothDevice = null;
+  rxCharacteristic = null;
+
+  // 연결이 끊기면 인식도 함께 자동 중지 — 끊긴 채로 계속 돌아가는 것 방지
+  if (isDetecting) {
+    isDetecting = false;
+    params.visible = 0;
+    updateGraphUI();
+    select('#dataDisplay').html("stop");
+  }
+
   const t = textData[currentLang];
-  select('#bluetoothStatus').html(t.status_disc).removeClass('status-connected status-error');
+  const statusEl = select('#bluetoothStatus');
+
+  if (isManualDisconnect) {
+    statusEl.html(t.status_disc).removeClass('status-connected status-error');
+  } else {
+    statusEl.html(t.err_disconnected).removeClass('status-connected').addClass('status-error');
+  }
+  isManualDisconnect = false;
+}
+
+function disconnectBluetooth() {
+  if (bluetoothDevice && bluetoothDevice.gatt.connected) {
+    // 실제 상태 정리는 'gattserverdisconnected' 이벤트를 받는 onDisconnected()가 담당
+    isManualDisconnect = true;
+    bluetoothDevice.gatt.disconnect();
+  } else {
+    isConnected = false;
+    bluetoothDevice = null;
+    rxCharacteristic = null;
+    const t = textData[currentLang];
+    select('#bluetoothStatus').html(t.status_disc).removeClass('status-connected status-error');
+  }
 }
 
 window.setup = setup;
 window.draw = draw;
-
