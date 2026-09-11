@@ -34,6 +34,12 @@ let lastVideoTime = -1;
 let isModelLoaded = false;
 let isDetecting = false;
 let detectionResults = null;
+// 영상 표시와 별도로 인식은 최대 15회/초, 그래프는 10회/초 갱신합니다.
+const INFERENCE_INTERVAL = 1000 / 15;
+const GRAPH_INTERVAL = 100;
+let predictionTimer = null;
+let cameraReadyTimer = null;
+let lastGraphTime = -Infinity;
 
 let facingMode = "user";
 let isFlipped = true;
@@ -92,15 +98,18 @@ function draw() {
 
   if (isDetecting && detectionResults && detectionResults.faceLandmarks.length > 0) {
     drawFaceMesh(detectionResults.faceLandmarks[0]);
-    calculateParameters(detectionResults.faceLandmarks[0], detectionResults.faceBlendshapes[0]);
-    params.visible = 1;
+
   } else {
     params.visible = 0;
     params.smile = 0;
     params.mouth = 0;
   }
 
-  updateGraphUI();
+  const graphTime = millis();
+  if (graphTime - lastGraphTime >= GRAPH_INTERVAL) {
+    updateGraphUI();
+    lastGraphTime = graphTime;
+  }
   
   if (isDetecting) {
     let currentTime = millis();
@@ -112,14 +121,50 @@ function draw() {
 }
 
 // --- Logic ---
-async function predictWebcam() {
-  if (!faceLandmarker || !isVideoReady) return;
-  let startTimeMs = performance.now();
-  if (video.elt.currentTime !== lastVideoTime) {
+function cancelPrediction() {
+  if (predictionTimer !== null) clearTimeout(predictionTimer);
+  predictionTimer = null;
+}
+
+function startDetection() {
+  if (isDetecting) return;
+  isDetecting = true;
+  lastVideoTime = -1;
+  // 버튼 이벤트 안에서는 추론하지 않고 화면 갱신 시간을 확보합니다.
+  predictionTimer = setTimeout(predictWebcam, 0);
+}
+
+function stopDetection() {
+  isDetecting = false;
+  cancelPrediction();
+  detectionResults = null;
+  params.visible = 0;
+  params.smile = 0;
+  params.mouth = 0;
+}
+
+function predictWebcam() {
+  predictionTimer = null;
+  if (!isDetecting) return;
+  const startedAt = performance.now();
+  if (faceLandmarker && isVideoReady && video && video.elt.readyState >= 2 &&
+      video.elt.currentTime !== lastVideoTime) {
     lastVideoTime = video.elt.currentTime;
-    detectionResults = faceLandmarker.detectForVideo(video.elt, startTimeMs);
+    detectionResults = faceLandmarker.detectForVideo(video.elt, startedAt);
+    if (detectionResults.faceLandmarks.length > 0) {
+      calculateParameters(detectionResults.faceLandmarks[0], detectionResults.faceBlendshapes[0]);
+      params.visible = 1;
+    } else {
+      params.visible = 0;
+      params.smile = 0;
+      params.mouth = 0;
+    }
   }
-  if (isDetecting) window.requestAnimationFrame(predictWebcam);
+  // 느린 추론 뒤에도 최소 16ms를 비워 화면 갱신 기회를 줍니다.
+  if (isDetecting) {
+    const elapsed = performance.now() - startedAt;
+    predictionTimer = setTimeout(predictWebcam, Math.max(16, INFERENCE_INTERVAL - elapsed));
+  }
 }
 
 function drawFaceMesh(landmarks) {
@@ -247,7 +292,8 @@ async function sendBluetoothDataReliable(data, maxRetries = 5, retryDelayMs = 80
 
 function updateGraphUI() {
   const setVal = (id, val, max) => {
-    if(els[id]) {
+    if(els[id] && els[id].lastValue !== val) {
+        els[id].lastValue = val;
         let percent = (val / max) * 100;
         els[id].bar.style('width', `${percent}%`);
         els[id].txt.html(val);
@@ -283,18 +329,17 @@ function createUI() {
   btnStart = createButton("모델 로딩 중...");
   btnStart.parent('object-control-buttons').addClass('start-button');
   btnStart.mousePressed(() => {
+    if (isDetecting) return;
     if (!isModelLoaded) return alert("모델 로딩 중입니다.");
     if (!isConnected) alert("주의: 블루투스가 연결되지 않았습니다.");
-    isDetecting = true;
-    predictWebcam();
+    startDetection();
   });
 
   // 인식 중지 버튼: "stop" 문자열 전송
   btnStop = createButton("인식 중지");
   btnStop.parent('object-control-buttons').addClass('stop-button');
   btnStop.mousePressed(async () => {
-    isDetecting = false;
-    params.visible = 0;
+    stopDetection();
     updateGraphUI();
     
     // UI 업데이트 및 Stop 전송
@@ -305,24 +350,32 @@ function createUI() {
 }
 
 function setupCamera() {
+  if (cameraReadyTimer !== null) clearInterval(cameraReadyTimer);
   isVideoReady = false;
+  lastVideoTime = -1;
+  detectionResults = null;
   video = createCapture({ video: { facingMode: facingMode }, audio: false });
   video.hide();
-  let check = setInterval(() => {
-    if (video.elt.readyState >= 2 && video.elt.videoWidth > 0) {
+  const capture = video;
+  cameraReadyTimer = setInterval(() => {
+    if (capture.elt.readyState >= 2 && capture.elt.videoWidth > 0) {
       isVideoReady = true;
-      clearInterval(check);
-      if(isDetecting) predictWebcam();
+      clearInterval(cameraReadyTimer);
+      cameraReadyTimer = null;
     }
   }, 100);
 }
 
 function switchCamera() {
-  isDetecting = false;
-  if(video) { video.remove(); video = null; }
+  const resumeDetection = isDetecting;
+  stopDetection();
+  updateGraphUI();
+  isVideoReady = false;
+  if (video) { video.remove(); video = null; }
   facingMode = facingMode === "user" ? "environment" : "user";
   isFlipped = (facingMode === "user");
-  setTimeout(() => { setupCamera(); isDetecting = true; }, 500);
+  setupCamera();
+  if (resumeDetection) startDetection();
 }
 
 async function connectBluetooth() {
@@ -357,8 +410,7 @@ function onDisconnected() {
 
   // 연결이 끊기면 인식도 함께 자동 중지 — 끊긴 채로 계속 돌아가는 것 방지
   if (isDetecting) {
-    isDetecting = false;
-    params.visible = 0;
+    stopDetection();
     updateGraphUI();
     select('#dataDisplay').html("stop");
   }
