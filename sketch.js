@@ -1,130 +1,10 @@
 /*
  * sketch.js
  * Boundary X - Face Recognition (Final Version)
- * Features: Face Mesh (Black/Thin), Correct Roll/Eye Logic, Multi-language, Stop Command
+ * Features: Face Mesh (Black/Thin), Correct Roll/Eye Logic, Stop Command
  */
 
 import { FaceLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3";
-
-// --- Multi-language Data ---
-const textData = {
-  ko: {
-    title: "AI 얼굴인식",
-    back: "돌아가기",
-    
-    // Monitors
-    h_monitor: "🖥️ 전송 데이터 확인",
-    info_title: "📢 전송 데이터 안내",
-    info_desc: "마이크로비트로 전송되는 <strong>19자리 숫자 데이터</strong>입니다.<br>(전송 속도: 10회/초)",
-    
-    // Cards with Numbers
-    h_cam: "1. 카메라 설정",
-    desc_cam: "카메라 버튼을 통해 화면을 설정해주세요.",
-    
-    h_conn: "2. 기기 연결",
-    desc_conn: "블루투스 버튼을 눌러 마이크로비트와 연결하세요.",
-    
-    h_data: "3. 실시간 데이터 확인",
-    desc_data: "얼굴 움직임과 표정이 아래 데이터로 변환됩니다.",
-    
-    h_control: "4. AI 얼굴 인식 제어",
-    desc_control: "시작 버튼을 눌러 AI 인식을 시작하세요.",
-
-    // Status & Buttons
-    status_wait: "상태: 연결 대기 중",
-    status_connected: "연결됨: ",
-    status_fail: "연결 실패",
-    status_disc: "연결 해제됨",
-    err_send: "⚠️ 데이터 전송 실패 - 연결 상태를 확인해주세요",
-    err_disconnected: "⚠️ 연결이 끊어졌습니다. 다시 연결해주세요",
-    
-    btn_switch: "전후방 전환",
-    btn_conn: "기기 연결",
-    btn_disc: "연결 해제",
-    btn_start_loading: "모델 로딩 중...",
-    btn_start: "얼굴 인식 시작",
-    btn_stop: "인식 중지",
-    
-    alert_loading: "모델 로딩 중입니다.",
-    alert_ble: "주의: 블루투스가 연결되지 않았습니다.",
-    
-    // Labels (With Descriptions)
-    p_x: "X (좌우)", 
-    p_y: "Y (상하)", 
-    p_z: "Z (거리)", 
-    p_yaw: "Yaw (좌우회전)", 
-    p_pitch: "Pitch (상하각도)", 
-    p_roll: "Roll (기울기)", 
-    p_smile: "Smile (0-9)",
-    
-    // Footer
-    f_company: "바운더리엑스",
-    f_slogan: "\"우리는 산업과 교육의 경계를 허물고, 미래 기술을 교실의 책상 위로 옮기는 사람들입니다\"",
-    f_address: "경기도 화성시 동탄첨단산업1로 동탄2인큐베이팅센터 7층, 706호",
-    f_product: "제품 소개",
-    f_bitrun: "AI 비트런", f_bitrun_desc: "마이크로비트 기반 이족보행로봇",
-    f_ponybot: "AI 포니봇", f_ponybot_desc: "마이크로비트 기반 모빌리티로봇",
-    f_support: "고객 지원",
-    f_contact: "문의처", f_contact_desc: "제품 문의 | 제휴 문의 | 연수 문의"
-  },
-  en: {
-    title: "AI Face Recog",
-    back: "Back",
-    
-    h_monitor: "🖥️ Packet Monitor",
-    info_title: "📢 Data Packet Info",
-    info_desc: "<strong>19-digit numeric data</strong> sent to Micro:bit.<br>(Rate: 10 times/sec)",
-    
-    h_cam: "1. Camera Settings",
-    desc_cam: "Configure your camera view.",
-    
-    h_conn: "2. Connection",
-    desc_conn: "Pair with Micro:bit via Bluetooth.",
-    
-    h_data: "3. Real-time Data",
-    desc_data: "Face movements converted to parameters.",
-    
-    h_control: "4. AI Control",
-    desc_control: "Start or Stop the AI recognition.",
-
-    status_wait: "Status: Waiting...",
-    status_connected: "Connected: ",
-    status_fail: "Connection Failed",
-    status_disc: "Disconnected",
-    err_send: "⚠️ Data transmission failed - Check connection",
-    err_disconnected: "⚠️ Connection lost. Please reconnect",
-    
-    btn_switch: "Switch Cam",
-    btn_conn: "Connect Device",
-    btn_disc: "Disconnect",
-    btn_start_loading: "Loading Model...",
-    btn_start: "Start Face Mesh",
-    btn_stop: "Stop",
-    
-    alert_loading: "Model is still loading...",
-    alert_ble: "Warning: Bluetooth not connected.",
-    
-    // Labels (With Descriptions)
-    p_x: "X (Left/Right)", 
-    p_y: "Y (Up/Down)", 
-    p_z: "Z (Distance)", 
-    p_yaw: "Yaw (Turn)", 
-    p_pitch: "Pitch (Up/Down)", 
-    p_roll: "Roll (Tilt)", 
-    p_smile: "Smile (0-9)",
-    
-    f_company: "Boundary X",
-    f_slogan: "\"We blur the lines between industry and education, bringing future tech to the classroom.\"",
-    f_address: "706, Dongtan 2 Incubating Center, Hwaseong-si, Gyeonggi-do, Korea",
-    f_product: "Products",
-    f_bitrun: "AI Bit-Run", f_bitrun_desc: "Micro:bit Bipedal Robot",
-    f_ponybot: "AI Pony-Bot", f_ponybot_desc: "Micro:bit Mobility Robot",
-    f_support: "Support",
-    f_contact: "Contact Us", f_contact_desc: "Inquiry | Partnership | Training"
-  }
-};
-
-let currentLang = 'ko';
 
 // --- Bluetooth UUIDs ---
 const UART_SERVICE_UUID = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
@@ -182,7 +62,7 @@ async function initializeFaceLandmarker() {
   });
   isModelLoaded = true;
   console.log("FaceLandmarker Loaded!");
-  updateLanguage(); 
+  btnStart.html("얼굴 인식 시작");
 }
 
 // --- p5.js ---
@@ -193,11 +73,6 @@ function setup() {
   setupCamera();
   createUI();
   
-  select('#lang-btn').mousePressed(() => {
-      currentLang = (currentLang === 'ko') ? 'en' : 'ko';
-      updateLanguage();
-  });
-
   initializeFaceLandmarker();
 }
 
@@ -206,7 +81,7 @@ function draw() {
 
   if (!isVideoReady || !video || video.width === 0) {
     fill(255); textAlign(CENTER); textSize(16);
-    text(currentLang === 'ko' ? "카메라 로딩 중..." : "Loading Camera...", width/2, height/2);
+    text("카메라 로딩 중...", width/2, height/2);
     return;
   }
 
@@ -237,37 +112,6 @@ function draw() {
 }
 
 // --- Logic ---
-function updateLanguage() {
-    const t = textData[currentLang];
-    
-    // Update HTML text
-    const langElements = document.querySelectorAll('[data-lang]');
-    langElements.forEach(el => {
-        const key = el.getAttribute('data-lang');
-        if(t[key]) el.innerHTML = t[key];
-    });
-
-    // Update Buttons
-    if(btnSwitch) btnSwitch.html(t.btn_switch);
-    if(btnConn) btnConn.html(t.btn_conn);
-    if(btnDisc) btnDisc.html(t.btn_disc);
-    if(btnStop) btnStop.html(t.btn_stop);
-    
-    if(btnStart) {
-        btnStart.html(isModelLoaded ? t.btn_start : t.btn_start_loading);
-    }
-
-    // Status
-    const statusEl = select('#bluetoothStatus');
-    if(!isConnected) {
-        statusEl.html(t.status_wait);
-    } else {
-        statusEl.html(t.status_connected + (bluetoothDevice ? bluetoothDevice.name : ""));
-    }
-
-    select('#lang-btn').html(currentLang === 'ko' ? 'EN' : 'KO');
-}
-
 async function predictWebcam() {
   if (!faceLandmarker || !isVideoReady) return;
   let startTimeMs = performance.now();
@@ -381,9 +225,8 @@ async function sendBluetoothData(data) {
     const now = Date.now();
     if (now - lastSendErrorTime > 3000) {
       lastSendErrorTime = now;
-      const t = textData[currentLang];
       const statusEl = select('#bluetoothStatus');
-      if (statusEl) statusEl.html(t.err_send).removeClass('status-connected').addClass('status-error');
+      if (statusEl) statusEl.html("⚠️ 데이터 전송 실패 - 연결 상태를 확인해주세요").removeClass('status-connected').addClass('status-error');
     }
     return false;
   } finally {
@@ -440,9 +283,8 @@ function createUI() {
   btnStart = createButton("모델 로딩 중...");
   btnStart.parent('object-control-buttons').addClass('start-button');
   btnStart.mousePressed(() => {
-    const t = textData[currentLang];
-    if (!isModelLoaded) return alert(t.alert_loading);
-    if (!isConnected) alert(t.alert_ble);
+    if (!isModelLoaded) return alert("모델 로딩 중입니다.");
+    if (!isConnected) alert("주의: 블루투스가 연결되지 않았습니다.");
     isDetecting = true;
     predictWebcam();
   });
@@ -497,12 +339,10 @@ async function connectBluetooth() {
     bluetoothDevice.addEventListener('gattserverdisconnected', onDisconnected);
 
     isConnected = true;
-    const t = textData[currentLang];
-    select('#bluetoothStatus').html(t.status_connected + bluetoothDevice.name).removeClass('status-error').addClass('status-connected');
+    select('#bluetoothStatus').html("연결됨: " + bluetoothDevice.name).removeClass('status-error').addClass('status-connected');
   } catch (e) {
     console.error(e);
-    const t = textData[currentLang];
-    select('#bluetoothStatus').html(t.status_fail).removeClass('status-connected').addClass('status-error');
+    select('#bluetoothStatus').html("연결 실패").removeClass('status-connected').addClass('status-error');
   }
 }
 
@@ -523,13 +363,12 @@ function onDisconnected() {
     select('#dataDisplay').html("stop");
   }
 
-  const t = textData[currentLang];
   const statusEl = select('#bluetoothStatus');
 
   if (isManualDisconnect) {
-    statusEl.html(t.status_disc).removeClass('status-connected status-error');
+    statusEl.html("연결 해제됨").removeClass('status-connected status-error');
   } else {
-    statusEl.html(t.err_disconnected).removeClass('status-connected').addClass('status-error');
+    statusEl.html("⚠️ 연결이 끊어졌습니다. 다시 연결해주세요").removeClass('status-connected').addClass('status-error');
   }
   isManualDisconnect = false;
 }
@@ -543,8 +382,7 @@ function disconnectBluetooth() {
     isConnected = false;
     bluetoothDevice = null;
     rxCharacteristic = null;
-    const t = textData[currentLang];
-    select('#bluetoothStatus').html(t.status_disc).removeClass('status-connected status-error');
+    select('#bluetoothStatus').html("연결 해제됨").removeClass('status-connected status-error');
   }
 }
 

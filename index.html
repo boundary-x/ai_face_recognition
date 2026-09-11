@@ -18,13 +18,12 @@
         <a href="https://boundaryx.io">
           <img src="https://raw.githubusercontent.com/boundary-x/ai_voice_recognition/refs/heads/main/boundaryx_logo.png" alt="Logo">
         </a>
-        <span data-lang="title">AI 얼굴인식</span> <span class="model-badge">Face Mesh</span>
+        <span>AI 얼굴인식</span> <span class="model-badge">Face Mesh</span>
       </div>
     </div>
     
     <div class="header-right">
-      <button id="lang-btn" class="lang-toggle">EN</button>
-      <a href="https://boundaryx.io/59" class="back-button" data-lang="back">돌아가기</a>
+      <a href="https://boundaryx.io/59" class="back-button">돌아가기</a>
     </div>
   </header>
 
@@ -34,10 +33,10 @@
     <section class="controls">
       
       <div class="control-group">
-        <h3 data-lang="h_monitor">🖥️ 전송 데이터 확인</h3>
+        <h3>🖥️ 전송 데이터 확인</h3>
         <div class="data-info-box">
-          <p class="info-title" data-lang="info_title">📢 전송 데이터 안내</p>
-          <p class="info-desc" data-lang="info_desc">마이크로비트로 전송되는 <strong>19자리 숫자 데이터</strong>입니다.<br>(전송 속도: 10회/초)</p>
+          <p class="info-title">📢 전송 데이터 안내</p>
+          <p class="info-desc">마이크로비트로 전송되는 <strong>19자리 숫자 데이터</strong>입니다.<br>(전송 속도: 10회/초)</p>
           <div class="info-tags">
             <span><strong>X,Y,Z</strong> : 위치</span>
             <span><strong>Yaw,Pitch,Roll</strong> : 회전</span>
@@ -48,46 +47,46 @@
       </div>
 
       <div class="control-group">
-        <h3 data-lang="h_cam">1. 카메라 설정</h3>
-        <p data-lang="desc_cam">카메라 버튼을 통해 화면을 설정해주세요.</p>
+        <h3>1. 카메라 설정</h3>
+        <p>카메라 버튼을 통해 화면을 설정해주세요.</p>
         <div id="camera-control-buttons" class="button-group"></div>
       </div>
 
       <div class="control-group">
-        <h3 data-lang="h_conn">2. 기기 연결</h3>
-        <p data-lang="desc_conn">블루투스 버튼을 눌러 마이크로비트와 연결하세요.</p>
-        <div id="bluetoothStatus" data-lang="status_wait">상태: 연결 대기 중</div>
+        <h3>2. 기기 연결</h3>
+        <p>블루투스 버튼을 눌러 마이크로비트와 연결하세요.</p>
+        <div id="bluetoothStatus">상태: 연결 대기 중</div>
         <div id="bluetooth-control-buttons" class="button-group" style="margin-top: 1rem;"></div>
       </div>
 
       <div class="control-group">
-        <h3 data-lang="h_data">3. 실시간 데이터 확인</h3>
-        <p data-lang="desc_data">얼굴 움직임과 표정이 아래 데이터로 변환됩니다.</p>
+        <h3>3. 실시간 데이터 확인</h3>
+        <p>얼굴 움직임과 표정이 아래 데이터로 변환됩니다.</p>
         
         <div class="param-grid">
             <div class="param-label">
-                <div class="p-header"><span class="p-name" data-lang="p_x">X (좌우)</span><span class="p-val" id="val-x">00</span></div>
+                <div class="p-header"><span class="p-name">X (좌우)</span><span class="p-val" id="val-x">00</span></div>
                 <div class="p-bar-bg"><div class="p-bar-fill" id="bar-x"></div></div>
             </div>
             <div class="param-label">
-                <div class="p-header"><span class="p-name" data-lang="p_y">Y (상하)</span><span class="p-val" id="val-y">00</span></div>
+                <div class="p-header"><span class="p-name">Y (상하)</span><span class="p-val" id="val-y">00</span></div>
                 <div class="p-bar-bg"><div class="p-bar-fill" id="bar-y"></div></div>
             </div>
             <div class="param-label">
-                <div class="p-header"><span class="p-name" data-lang="p_z">Z (거리)</span><span class="p-val" id="val-z">00</span></div>
+                <div class="p-header"><span class="p-name">Z (거리)</span><span class="p-val" id="val-z">00</span></div>
                 <div class="p-bar-bg"><div class="p-bar-fill" id="bar-z"></div></div>
             </div>
             
             <div class="param-label">
-                <div class="p-header"><span class="p-name" data-lang="p_yaw">Yaw (좌우회전)</span><span class="p-val" id="val-yaw">00</span></div>
+                <div class="p-header"><span class="p-name">Yaw (좌우회전)</span><span class="p-val" id="val-yaw">00</span></div>
                 <div class="p-bar-bg"><div class="p-bar-fill" id="bar-yaw"></div></div>
             </div>
             <div class="param-label">
-                <div class="p-header"><span class="p-name" data-lang="p_pitch">Pitch (상하각도)</span><span class="p-val" id="val-pitch">00</span></div>
+                <div class="p-header"><span class="p-name">Pitch (상하각도)</span><span class="p-val" id="val-pitch">00</span></div>
                 <div class="p-bar-bg"><div class="p-bar-fill" id="bar-pitch"></div></div>
             </div>
             <div class="param-label">
-                <div class="p-header"><span class="p-name" data-lang="p_roll">Roll (기울기)</span><span class="p-val" id="val-roll">0</span></div>
+                <div class="p-header"><span class="p-name">Roll (기울기)</span><span class="p-val" id="val-roll">0</span></div>
                 <div class="p-bar-bg"><div class="p-bar-fill" id="bar-roll"></div></div>
             </div>
 
@@ -104,7 +103,7 @@
                 <div class="p-bar-bg"><div class="p-bar-fill" id="bar-reye"></div></div>
             </div>
             <div class="param-label accent">
-                <div class="p-header"><span class="p-name" data-lang="p_smile">Smile (0-9)</span><span class="p-val" id="val-smile">0</span></div>
+                <div class="p-header"><span class="p-name">Smile (0-9)</span><span class="p-val" id="val-smile">0</span></div>
                 <div class="p-bar-bg"><div class="p-bar-fill" id="bar-smile"></div></div>
             </div>
             
@@ -116,8 +115,8 @@
       </div>
 
       <div class="control-group">
-        <h3 data-lang="h_control">4. AI 얼굴 인식 제어</h3>
-        <p data-lang="desc_control">시작 버튼을 눌러 AI 인식을 시작하세요.</p>
+        <h3>4. AI 얼굴 인식 제어</h3>
+        <p>시작 버튼을 눌러 AI 인식을 시작하세요.</p>
         <div id="object-control-buttons" class="button-group"></div>
       </div>
 
@@ -128,35 +127,35 @@
     <div class="footer-container">
       <div class="footer-top">
         <div class="footer-info">
-          <h2 class="footer-logo" data-lang="f_company">바운더리엑스</h2>
-          <p class="slogan" data-lang="f_slogan">"우리는 산업과 교육의 경계를 허물고, 미래 기술을 교실의 책상 위로 옮기는 사람들입니다"</p>
+          <h2 class="footer-logo">바운더리엑스</h2>
+          <p class="slogan">"우리는 산업과 교육의 경계를 허물고, 미래 기술을 교실의 책상 위로 옮기는 사람들입니다"</p>
           <address>
-            <p data-lang="f_address">경기도 화성시 동탄첨단산업1로 동탄2인큐베이팅센터 7층, 706호</p>
+            <p>경기도 화성시 동탄첨단산업1로 동탄2인큐베이팅센터 7층, 706호</p>
             <p class="copyright">© 2026 Boundary X Co. All rights reserved.</p>
           </address>
         </div>
 
         <div class="footer-links">
           <div class="link-column">
-            <h4 data-lang="f_product">제품 소개</h4>
+            <h4>제품 소개</h4>
             <ul>
               <li>
-                <a href="https://boundaryx.io/shop/?idx=25" target="_blank" data-lang="f_bitrun">AI 비트런</a>
-                <span class="link-desc" data-lang="f_bitrun_desc">마이크로비트 기반 이족보행로봇</span>
+                <a href="https://boundaryx.io/shop/?idx=25" target="_blank">AI 비트런</a>
+                <span class="link-desc">마이크로비트 기반 이족보행로봇</span>
               </li>
               <li>
-                <a href="https://boundaryx.io/shop/?idx=26" target="_blank" data-lang="f_ponybot">AI 포니봇</a>
-                <span class="link-desc" data-lang="f_ponybot_desc">마이크로비트 기반 모빌리티로봇</span>
+                <a href="https://boundaryx.io/shop/?idx=26" target="_blank">AI 포니봇</a>
+                <span class="link-desc">마이크로비트 기반 모빌리티로봇</span>
               </li>
             </ul>
           </div>
 
           <div class="link-column">
-            <h4 data-lang="f_support">고객 지원</h4>
+            <h4>고객 지원</h4>
             <ul>
               <li>
-                <a href="https://boundaryx.io/contact" target="_blank" data-lang="f_contact">문의처</a>
-                <span class="link-desc" data-lang="f_contact_desc">제품 문의 | 제휴 문의 | 연수 문의</span>
+                <a href="https://boundaryx.io/contact" target="_blank">문의처</a>
+                <span class="link-desc">제품 문의 | 제휴 문의 | 연수 문의</span>
               </li>
             </ul>
           </div>

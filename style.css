@@ -79,14 +79,6 @@ header {
 }
 .back-button:hover { background: #FFFFFF; color: #000000; }
 
-.lang-toggle {
-    background: transparent; color: #888; border: 1px solid #555;
-    padding: 0.4rem 0.8rem; border-radius: var(--radius-pill);
-    font-size: 0.8rem; font-weight: 700; cursor: pointer; min-width: auto;
-    transition: all 0.2s; white-space: nowrap;
-}
-.lang-toggle:hover { color: #FFF; border-color: #FFF; }
-
 /* --- Main Layout --- */
 main { width: 100%; max-width: 1200px; margin: 0 auto; padding: 3rem 1.5rem; flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2rem; }
 .canvas-container { width: 100%; max-width: 400px; aspect-ratio: 4/3; border-radius: var(--radius-card); overflow: hidden; background: #000; box-shadow: 0 4px 20px rgba(0,0,0,0.1); position: relative; flex-shrink: 0; }
@@ -173,7 +165,6 @@ address { font-style: normal; color: #888; line-height: 1.6; }
   /* 배지 및 버튼 축소 */
   .model-badge { font-size: 0.6rem; padding: 2px 6px; }
   .back-button { font-size: 0.75rem; padding: 0.3rem 0.6rem; }
-  .lang-toggle { font-size: 0.7rem; padding: 0.3rem 0.5rem; }
 
   /* 본문 레이아웃 */
   .param-grid { grid-template-columns: repeat(2, 1fr); }

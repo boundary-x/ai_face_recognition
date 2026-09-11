@@ -24,7 +24,7 @@ Designed for educational and prototyping environments, this app converts facial 
 
 ### 3. 📱 Responsive & User-Friendly UI
 - **Cross-Platform:** The layout automatically adapts to PC, Tablet, and Mobile environments (features a Sticky Canvas for mobile).
-- **Multi-language Support:** Instantly switch between **English (EN)** and **Korean (KO)** with a single click.
+- **Korean Interface:** Controls, instructions, and status messages are provided in Korean.
 - **Camera Control:** Supports front/rear camera switching and automatic mirroring.
 
 ---
