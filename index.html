@@ -9,6 +9,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
   <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css" />
   <link rel="stylesheet" type="text/css" href="style.css">
+  <link rel="stylesheet" href="support.css">
 </head>
 
 <body>
@@ -22,7 +23,8 @@
       </div>
     </div>
     
-    <div class="header-right">
+    <div class="header-right header-actions">
+      <button type="button" class="help-button" data-help="">도움말</button>
       <a href="https://boundaryx.io/59" class="back-button">돌아가기</a>
     </div>
   </header>
@@ -57,6 +59,7 @@
         <p>블루투스 버튼을 눌러 마이크로비트와 연결하세요.</p>
         <div id="bluetoothStatus">상태: 연결 대기 중</div>
         <div id="bluetooth-control-buttons" class="button-group" style="margin-top: 1rem;"></div>
+        <div class="support-inline"><button type="button" data-help="help-connection">연결이 안 되나요?</button></div>
       </div>
 
       <div class="control-group">
@@ -64,7 +67,7 @@
         <p>얼굴 움직임과 표정이 아래 데이터로 변환됩니다.</p>
         
         <div class="param-grid">
-            <div class="param-label">
+            <div class="param-label" id="position-params">
                 <div class="p-header"><span class="p-name">X (좌우)</span><span class="p-val" id="val-x">00</span></div>
                 <div class="p-bar-bg"><div class="p-bar-fill" id="bar-x"></div></div>
             </div>
@@ -77,7 +80,7 @@
                 <div class="p-bar-bg"><div class="p-bar-fill" id="bar-z"></div></div>
             </div>
             
-            <div class="param-label">
+            <div class="param-label" id="rotation-params">
                 <div class="p-header"><span class="p-name">Yaw (좌우회전)</span><span class="p-val" id="val-yaw">00</span></div>
                 <div class="p-bar-bg"><div class="p-bar-fill" id="bar-yaw"></div></div>
             </div>
@@ -90,7 +93,7 @@
                 <div class="p-bar-bg"><div class="p-bar-fill" id="bar-roll"></div></div>
             </div>
 
-            <div class="param-label accent">
+            <div class="param-label accent" id="expression-params">
                 <div class="p-header"><span class="p-name">Mouth</span><span class="p-val" id="val-mouth">00</span></div>
                 <div class="p-bar-bg"><div class="p-bar-fill" id="bar-mouth"></div></div>
             </div>
@@ -120,6 +123,7 @@
         <div id="object-control-buttons" class="button-group"></div>
       </div>
 
+      <details id="support-card" class="control-group"></details>
     </section>
   </main>
 
@@ -165,6 +169,8 @@
   </footer>
 
   <script type="module" src="sketch.js"></script>
+  <script src="support.js"></script>
 </body>
 </html>
+
 

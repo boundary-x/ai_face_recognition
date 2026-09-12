@@ -59,7 +59,7 @@ Sent when a face is detected.
 > * Center(50,50), Looking straight, Mouth closed(00), Eyes open(99), Level head(5), Neutral expression(0), Detected(1)
 
 ### 3. Control Commands
-* **`stop`**: Sent when the 'Stop' button is pressed or no face is detected. Use this to halt robot motors.
+* **`stop`**: Transmission is attempted when the Stop button is pressed. When no face is detected, the current implementation continues numeric packets with Visible=0; other position values may retain their previous values. Handle both cases in the receiving project.
 
 **Tech Stack:**
 - **Frontend:** HTML5, CSS3
@@ -72,3 +72,10 @@ Sent when a face is detected.
 - All rights to the source code and design of this project belong to BoundaryX.
 - Web: boundaryx.io
 - Contact: https://boundaryx.io/contact
+
+
+## In-app Support
+
+Open Help in the header for a 12-step, read-only walkthrough with chapters for face tracking, optional micro:bit connection, and data interpretation. The support card contains device-name and AI Ponybot example links, troubleshooting, and update notes. Host support.js and support.css alongside index.html, style.css, and sketch.js. No build step is required.
+
+The data panel displays outgoing values before write completion; it is not a delivery confirmation. Z is a relative face-size value, not a measured distance. This app tracks facial motion and does not enroll or identify people.
