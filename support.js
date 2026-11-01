@@ -6,7 +6,7 @@
   support.innerHTML = `
     <summary><span><strong>사용 가이드 및 지원</strong><small>사용법 · 예제 코드 · 문제 해결</small></span><span class="support-chevron" aria-hidden="true">⌄</span></summary>
     <div class="support-content">
-      <p class="support-intro">얼굴의 위치·회전·표정을 데이터로 활용해보세요.</p>
+      <p class="support-intro">얼굴의 위치·회전·표정을 데이터로 활용해보세요. 블루투스 연결 없이 인식하고 전송할 데이터를 먼저 확인할 수 있습니다. 기기를 연결하면 실제 데이터를 전송합니다.</p>
       <div class="support-actions"><button type="button" data-tour="all" class="support-primary">사용법 둘러보기 <span aria-hidden="true">→</span></button></div>
       <details class="support-section" id="help-examples"><summary>마이크로비트 예제 코드</summary><div class="support-answer example-codes">
         <div class="example-code"><a href="https://makecode.microbit.org/S49771-77509-50114-72682" target="_blank" rel="noopener noreferrer">블루투스 이름 확인 코드 ↗</a><p>연결할 마이크로비트의 장치 이름을 확인합니다. 마이크로비트의 LED 매트릭스에 출력되는 이름(알파벳 소문자 5자리)을 확인한 뒤 아래 프로젝트 코드를 다운로드하세요.</p></div>
@@ -27,13 +27,13 @@
   const recognition = [
     ['#p5-container','얼굴을 카메라에 비춰주세요','카메라 권한을 허용하고 모델 로딩을 기다리세요. 이 앱은 얼굴의 움직임을 추적하며, 별도의 ID 학습은 필요하지 않습니다.'],
     ['#camera-control-buttons','촬영할 카메라를 선택하세요','전후방 전환으로 사용할 카메라를 선택하세요. 얼굴 전체가 화면 안에 들어오도록 위치를 맞춰주세요.'],
-    ['#object-control-buttons','얼굴 인식을 시작하세요','모델 로딩 후 ‘얼굴 인식 시작’을 누르세요. 기기가 연결되지 않았다는 알림을 닫아도 화면에서 얼굴 움직임을 확인할 수 있습니다.'],
+    ['#object-control-buttons','얼굴 인식을 시작하세요','모델 로딩 후 ‘얼굴 인식 시작’을 누르세요. 블루투스 연결 없이도 얼굴 움직임과 전송할 데이터를 확인할 수 있습니다.'],
     ['#val-vis','얼굴 감지 상태를 확인하세요','Visible이 1이면 얼굴이 감지된 상태, 0이면 감지되지 않은 상태입니다. 위치나 표정 값을 사용하기 전에 이 값을 확인하세요.']
   ];
   const device = [
     ['#project-example-link','프로젝트 예제를 준비하세요','장치 이름 확인 코드로 LED의 알파벳 소문자 5자리를 확인하세요. 그다음 사용하는 제품에 맞게 AI 포니봇 예제를 준비해 다운로드하세요.'],
     ['#bluetooth-control-buttons','마이크로비트를 연결하세요','‘기기 연결’을 누르고 내 마이크로비트를 선택하세요. 예제의 블루투스 페어링 설정을 확인하고 다른 앱과의 연결은 해제하세요.'],
-    ['#dataDisplay','전송할 데이터를 확인하세요','연결된 상태에서 인식을 시작하면 최대 초당 10회 숫자 데이터를 보냅니다. 이 표시는 전송할 값이며, 수신 성공 여부는 연결 상태와 기기의 동작도 함께 확인하세요.'],
+    ['#dataDisplay','전송할 데이터를 확인하세요','연결된 상태에서 인식을 시작하면 최대 초당 10회 숫자 데이터를 보냅니다. 미연결 시 전송할 데이터, 쓰기 성공 시 전송됨으로 표시합니다. 실제 기기의 동작도 함께 확인하세요.'],
     ['#object-control-buttons','인식을 마치면 중지하세요','‘인식 중지’를 누르면 stop 전송을 시도합니다. 얼굴 미감지 시에는 Visible=0이 전송되므로 기기 코드에서 두 경우를 모두 처리하세요.']
   ];
   const data = [
@@ -147,4 +147,6 @@
   window.addEventListener('scroll', reposition, {passive:true});
   if (location.hash === '#support-card') requestAnimationFrame(() => openHelp());
 })();
+
+
 
