@@ -245,13 +245,17 @@ function calculateParameters(landmarks, blendshapes) {
   params.smile = Math.floor(constrain(smileVal * 10, 0, 9)); 
 }
 
-function sendPacket() {
-  if (!isConnected || !rxCharacteristic) return;
+async function sendPacket() {
   const pad = (num) => String(num).padStart(2, '0');
   let p = params;
   let packet = "" + pad(p.x) + pad(p.y) + pad(p.z) + pad(p.yaw) + pad(p.pitch) + pad(p.mouth) + pad(p.lEye) + pad(p.rEye) + String(p.roll) + String(p.smile) + String(p.visible);
-  select('#dataDisplay').html(packet);
-  sendBluetoothData(packet);
+  if (!isConnected || !rxCharacteristic) {
+    select('#dataDisplay').html('전송할 데이터: ' + packet); return;
+  }
+  if (isSendingData) return;
+  const target = rxCharacteristic;
+  const sent = await sendBluetoothData(packet);
+  if (isDetecting && isConnected && rxCharacteristic === target) select('#dataDisplay').html((sent ? '전송됨: ' : '전송 실패: ') + packet);
 }
 
 // 성공하면 true, 스킵되거나 실패하면 false를 반환
@@ -331,7 +335,6 @@ function createUI() {
   btnStart.mousePressed(() => {
     if (isDetecting) return;
     if (!isModelLoaded) return alert("모델 로딩 중입니다.");
-    if (!isConnected) alert("주의: 블루투스가 연결되지 않았습니다.");
     startDetection();
   });
 
@@ -343,9 +346,11 @@ function createUI() {
     updateGraphUI();
     
     // UI 업데이트 및 Stop 전송
-    select('#dataDisplay').html("stop");
+    if (!isConnected || !rxCharacteristic) { select('#dataDisplay').html('인식 중지됨'); return; }
+    select('#dataDisplay').html('전송 중: stop');
     
-    await sendBluetoothDataReliable("stop");
+    const sent = await sendBluetoothDataReliable('stop');
+    select('#dataDisplay').html(sent ? '전송됨: stop' : '전송 실패: stop');
   });
 }
 
@@ -440,3 +445,5 @@ function disconnectBluetooth() {
 
 window.setup = setup;
 window.draw = draw;
+
+
